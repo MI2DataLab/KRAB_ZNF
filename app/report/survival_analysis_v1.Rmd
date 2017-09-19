@@ -1,0 +1,168 @@
+---
+title: "TCGA survival analysis"
+author: "Rafal Cylwa"
+date: "5 marca 2017"
+output:
+  md_document:
+    toc: yes
+  html_document:
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+# Intro
+This report provides an overview of survival analysis of cancer patients based on the TCGA data.
+The aim was to identify pairs of (cancer cohort, gene) which possibly indicate the difference in survival time in groups of patients with high and low expression of a given gene.
+
+TCGA data used for the analysis is obtained via RTCGA family of R packages.
+
+[Link to Shiny app hosted on shinyapps.io](https://rafalcyl.shinyapps.io/krab_survival_analysis/)
+# Data download and preparation 
+
+Packages used:
+```{r, warning=FALSE, message=FALSE, echo = TRUE}
+library(RTCGA)          # Functions for querying the data 
+library(RTCGA.rnaseq)   # Gene expression data
+library(RTCGA.clinical) # Clinical data
+library(survival)       # Survival analysis tools
+library(survminer)      # Survival analysis tools
+library(tidyverse)
+library(knitr)
+library(pheatmap)
+```
+
+Steps of data preparation (R script avialable in /scripts)
+ 
+1. Genenes selected for investigation
+```{r, echo = TRUE}
+selected_genes <- c("ZNF695",
+                    "ZNF643",
+                    "ZNF789",
+                    "ZNF320",
+                    "ZNF273",
+                    "ZNF707",
+                    "ZNF205",
+                    "ZNF468",
+                    "ZNF714",
+                    "ZNF485",
+                    "ZNF525",
+                    "ZNF267",
+                    "ZNF282",
+                    "ZNF114")
+```
+2. Extractiong column names for selected genes
+3. Downloading expressions 
+4. Downloading survival times
+5. Joining survival times with gene expressions
+6. Check for join multiplicates
+7. We remove SKCM.rnaseq, because there is only one observation.
+8. Shorten gene names
+9. Data overview
+```{r, echo = FALSE}
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/survival_data.Rdata")
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/survival_data_cat_median.Rdata")
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/survival_data_cat_optimal.Rdata")
+survival_data %>% group_by(dataset) %>% summarise(n_of_observations = n()) %>% kable()
+```
+
+# Data analysis
+
+## Categorisation of gene expressions
+
+In order to use log-rank test for comparing two survival curves we need to split gene expressions variables into categorical variables (high/low expression). 
+
+For our analysis we use two methods for splitting. One is to use median as a cutpoint and second is to use a cutpoint selected using maximally selected rank statistics [maximally selected rank statistics](https://cran.r-project.org/web/packages/maxstat/vignettes/maxstat.pdf)
+
+Note that each cutpoint is calculated in groups (for each combination of gene/cohort).
+
+```{r results='hide'}
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/pvals_optimal.Rdata")
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/pvals_median.Rdata")
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/cutpoints_matrix.Rdata")
+```
+
+Cutpoints obtained using maximally selected rank statistics:
+```{r}
+kable(cutpoints_matrix)
+```
+
+
+__Cutpoints obtained using medians__
+```{r}
+survival_data[, 4:18] %>% group_by(dataset) %>% summarise_each(funs(median)) %>% kable()
+```
+
+
+## Log-rank tests
+
+Now, for each pair [gene, cohort] we calculate p-values of log-rank tests.
+
+Low p-value indicates that there is a significant difference in survival time for two groups i.e. high/low expression.
+
+Heatmap of p-values for log-rank test using cutpoint via maximally selected rank statistics.
+```{r}
+pheatmap(na.omit(pvals_optimal[, 1:14]), cluster_rows = FALSE, cluster_cols = FALSE)
+```
+
+Heatmap of p-values for log-rank test using median cutpoint.
+```{r}
+pheatmap(na.omit(pvals_median[, 1:14]), cluster_rows = FALSE, cluster_cols = FALSE)
+```
+
+## Examples of Kaplan-Meier survival curves for some interesting cases
+
+### GBMLGG/ZNF485/median
+In these case p < 0.05 and we observe that survival curves differs i.e. lower expression = longer survival.
+
+```{r}
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/survival_data_cat_median.Rdata")
+
+fit <- survfit(Surv(times, patient.vital_status) ~ ZNF485,
+               data = survival_data_cat_median[survival_data_cat_median$dataset == "KIPAN", ])
+ggsurvplot(
+   fit,                     # survfit object with calculated statistics.
+   risk.table = TRUE,       # show risk table.
+   pval = TRUE,             # show p-value of log-rank test.
+   conf.int = TRUE,         # show confidence intervals for
+                            # point estimaes of survival curves.
+   xlim = c(0,3000),        # present narrower X axis, but not affect
+                            # survival estimates.
+   break.time.by = 1000,    # break X axis in time intervals by 500.
+   ggtheme = theme_RTCGA(), # customize plot and risk table with a theme.
+  risk.table.y.text.col = T, # colour risk table text annotations.
+  risk.table.y.text = FALSE # show bars instead of names in text annotations
+                            # in legend of risk table
+)
+```
+
+### KIRC/ZNF468/median
+In these case p > 0.05 and we observe that survival curves are realively close to each other.
+
+```{r, warning=FALSE}
+load("C:/Users/rafalc/Documents/survival_analysis_App/data/survival_data_cat_median.Rdata")
+
+fit2 <- survfit(Surv(times, patient.vital_status) ~ ZNF468,
+               data = survival_data_cat_median[survival_data_cat_median$dataset == "KIRC", ])
+ggsurvplot(
+   fit2,                     # survfit object with calculated statistics.
+   risk.table = TRUE,       # show risk table.
+   pval = TRUE,             # show p-value of log-rank test.
+   conf.int = TRUE,         # show confidence intervals for
+                            # point estimaes of survival curves.
+   xlim = c(0,3000),        # present narrower X axis, but not affect
+                            # survival estimates.
+   break.time.by = 1000,    # break X axis in time intervals by 500.
+   ggtheme = theme_RTCGA(), # customize plot and risk table with a theme.
+  risk.table.y.text.col = T, # colour risk table text annotations.
+  risk.table.y.text = FALSE # show bars instead of names in text annotations
+                            # in legend of risk table
+)
+```
+
+
