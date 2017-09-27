@@ -2,7 +2,8 @@ name: krab_survival_analysis
 title:
 account: rafalcyl
 server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
 appId: 168442
-bundleId: 830521
+bundleId: 995183
 url: https://rafalcyl.shinyapps.io/krab_survival_analysis/
-when: 1495006879.54142
+when: 1506296147.53495
