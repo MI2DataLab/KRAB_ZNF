@@ -1,6 +1,6 @@
 # KRAB-ZNF explorer - expression of KRAB-ZNF- transcription factors in The Cancer Genome Atlas study 
 
-KRAB-ZNF explorer is a web-based application for analyzing the expression of KRAB-ZNF transcription factors in the data from The Cancer Genome Atlas study. 
+[KRAB-ZNF explorer](http://mi2.mini.pw.edu.pl:8080/KRAB_ZNF/) is a web-based application for analyzing the expression of KRAB-ZNF transcription factors in the data from The Cancer Genome Atlas study. 
 
 Key functionalities cover: 
 
