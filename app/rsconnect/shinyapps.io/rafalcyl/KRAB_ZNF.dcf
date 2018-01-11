@@ -5,6 +5,6 @@ account: rafalcyl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 218148
-bundleId: 995221
+bundleId: 999875
 url: https://rafalcyl.shinyapps.io/KRAB_ZNF/
-when: 1506299484.93071
+when: 1506520117.43067
