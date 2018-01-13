@@ -15,6 +15,7 @@ KRAB-ZNF explorer is developed by Rafal Cylwa and collaborators: Urszula Oleksie
 Analyses are performed based on The Cancer Genome Atlas (TCGA) data. 
 R sources of the application are in this Github repository.
 
+Screenshots:
 ![Survival curve](/screenshots/survival_curve.png)
 ![Expression across cohorts](/screenshots/screen2.png)
 ![Test results](/screenshots/screen3.png)
