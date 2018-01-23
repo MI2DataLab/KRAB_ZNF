@@ -498,7 +498,7 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "A table shows results of a t-test for methylation level difference between a group with high expression (top 10%) and low expression (bottom 10%) of a given KRAB-ZNF factor conducted for each cohort and gene separately."
+              "A table shows results of a t-test (p-value adjusted using FDR method) for methylation level difference between a group with high expression (top 10%) and low expression (bottom 10%) of a given KRAB-ZNF factor conducted for each cohort and gene separately."
             )
             )),
           checkboxInput(
@@ -710,7 +710,7 @@ navbarPage(
     #            ),
     #            mainPanel(plotlyOutput("expression_heatmap2"))
     #          ))
-    tabPanel("Experessions boxplots and table",
+    tabPanel("Expressions boxplots and table",
              sidebarLayout(
                sidebarPanel(
                  wellPanel(helpText(

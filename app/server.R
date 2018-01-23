@@ -558,6 +558,7 @@ shinyServer(function(input, output) {
       geom_boxplot() +
       #coord_cartesian(ylim = ylim1*4) +
       ylab(ifelse(input$boxplot_log_scale, "mRNA log(x+1) scale",  "mRNA")) +
+      xlab(paste(input$gene3 , "isoforms", sep = " ")) +
       scale_fill_manual(values = group_colors) +
       theme(
         panel.background = element_rect(fill = 'white'),
@@ -868,6 +869,9 @@ shinyServer(function(input, output) {
     if (input$log_scale)
       m <- log(m + 1)
     m <- m[genes,]
+    colnames(m) <- gsub(x = colnames(m), pattern = 'Cervical squamous cell', 'Cervix')
+    colnames(m) <- gsub(x = colnames(m), pattern = 'Cholangiocarcinoma', 'Bile duct')
+    colnames(m) <- gsub(x = colnames(m), pattern = 'Pheochromocytoma and Paraganglioma', 'Neuroendocrine glands')
     
     p <- pheatmap(
       m,
