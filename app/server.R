@@ -12,11 +12,10 @@ library(RColorBrewer)
 library(httpuv)
 library(heatmaply)
 library(tidyr)
-#library(RTCGA.methylation)
-
 
 shinyServer(function(input, output) {
   # Sys.setlocale("LC_ALL","English")
+  # prepare precalculated datasets
   load("data/test_results_median.RData")
   load("data/test_results_optimal.RData")
   load("data/survival_data.RData")
@@ -25,13 +24,15 @@ shinyServer(function(input, output) {
   load("data/pvals_optimal.RData")
   load("data/pvals_median.RData")
   load("data/all_isoforms.rda")
-  #load("data/test_cancer_vs_normal.rda")
   load("data/expression_means.RData")
   load("data/expressions_all.RData")
   load("data/expressions_normal.RData")
   load("data/illumina_humanmethylation_27_data.rda")
   load("data/selected_genes_all.RData")
   load("data/selected_genes_all_restricted.RData")
+  #load("data/test_cancer_vs_normal.rda")
+  
+  # selected genes to compare
   selected_group <- c(
     "ZNF695",
     "ZNF643",
@@ -48,7 +49,9 @@ shinyServer(function(input, output) {
     "ZNF282",
     "ZNF114"
   )
-  
+
+  # additional parameters for survminer
+  # prepare data for survival analysis
   survival_data_selected <- function() {
     if (input$curve_cutpoint == "max-rank statistic") {
       selected_data <-
@@ -64,13 +67,14 @@ shinyServer(function(input, output) {
     selected_data$times <- selected_data$times / 365
     return(selected_data)
   }
-  
+
+  # prepare survival estimator
+  # set all required parameters for survplot
   survival_curve_plot <- reactive({
     selected_data <- survival_data_selected()
-    #plot(selected_data[, "x2"])
     fit <-
       survfit(Surv(times, patient.vital_status) ~ expression, data = selected_data)
-    
+
     selected_gene <- input$gene
     limit_time <-
       max(max(selected_data[selected_data[, "expression"] == "low", "times"]),
@@ -127,6 +131,9 @@ shinyServer(function(input, output) {
       font.legend = input$survival_font_legend
     )
   })
+
+  # find cutpoint for continouse variables
+  # cutpoint is selected to maximize test statistic
   cutpoint_plot <- function() {
     max_stat_cutpoint <- surv_cutpoint(
       survival_data[survival_data$dataset == input$cohort2,],
@@ -134,7 +141,7 @@ shinyServer(function(input, output) {
       event = "patient.vital_status",
       variables = c(input$gene2)
     )
-    
+
     plot(
       max_stat_cutpoint,
       xlab = paste(input$gene2, " mRNA expression level"),
@@ -148,19 +155,19 @@ shinyServer(function(input, output) {
       font.y = input$cutpoint_font_ylab,
       font.legend = input$cutpoint_font_legend
     )
-    
   }
-  
+
+  # ultimate rendering function
   output$survival_curve <- renderPlot({
     survival_curve_plot()
   })
-  
+
   output$cutpoint_plot <- renderPlot({
     cutpoint_plot()
   })
-  
-  
-  
+
+  # save plot to file
+  # png support for the download button
   output$survival_plot_png <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.png', sep = '')
@@ -176,7 +183,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # pdf support for the download button
   output$survival_plot_pdf <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.pdf', sep = '')
@@ -191,7 +200,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # eps support for the download button
   output$survival_plot_eps <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.eps', sep = '')
@@ -209,7 +220,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # tiff support for the download button
   output$survival_plot_tiff <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.tiff', sep = '')
@@ -225,7 +238,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # png support for the download button
   output$cutpoint_plot_png <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.png', sep = '')
@@ -241,7 +256,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # tiff support for the download button
   output$cutpoint_plot_tiff <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.tiff', sep = '')
@@ -257,7 +274,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # pdf support for the download button
   output$cutpoint_plot_pdf <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.pdf', sep = '')
@@ -272,7 +291,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # save plot to file
+  # eps support for the download button
   output$cutpoint_plot_eps <- downloadHandler(
     filename = function() {
       paste(input$gene, input$cohort, '.eps', sep = '')
@@ -284,17 +305,18 @@ shinyServer(function(input, output) {
         height = input$cutpoint_height_px / 100,
         fallback_resolution = 600
       )
-      #par(oma=c(0,0,4,0))
       print(cutpoint_plot())
       dev.off()
     }
   )
-  
+
   # Generate a summary of the dataset
   output$summary <- renderPrint({
     print(input$gene)
   })
-  
+
+  # generate heatmap
+  # calculate and show p-values
   heatmap_log_rank_reactive <- function() {
     genes_log_rank <- input$selected_genes_manually_log_rank
     if(input$all_genes_logrank)
@@ -319,22 +341,22 @@ shinyServer(function(input, output) {
         brewer.pal(n = 7, name = input$heatmap_log_rank_scale)
       ))(10)
     )
-    #grid::grid.newpage()
     grid::grid.draw(hm$gtable)
   }
-  
-  
-  
-  
+
+  # generate heatmap 
+  # for p-values for log-rank plot
   output$heatmap_log_rank_plot <- renderPlot({
     par(mar = c(5, 6, 4, 1) + .1)
     heatmap_log_rank_reactive()
   }, height = function() {
     length(input$selected_genes_manually_log_rank) * 20 + 200
   }, execOnResize = TRUE)
-  
+
+  # generate and download the heatmap
+  # as tiff file
   output$download_heatmap_log_rank <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       sprintf('%s.%s', "heatmap", input$select_file_type_log_rank_heatmap)
       # paste("heatmap.", input$select_file_type_expression_heatmap, sep = "")
     },
@@ -352,11 +374,13 @@ shinyServer(function(input, output) {
           postscript(..., width = width, height = height)
         }
       }
-      ggsave(file, 
-             plot = heatmap_log_rank_reactive(), 
+      ggsave(file,
+             plot = heatmap_log_rank_reactive(),
              device = device(height = length(input$selected_genes_manually_log_rank)/2 + 2, width = 12))
     })
-  
+
+  # generate and download the heatmap
+  # as png file
   output$heatmap_log_rank_plot_png <- downloadHandler(
     filename = function() {
       paste("heatmap", '.png', sep = '')
@@ -365,7 +389,9 @@ shinyServer(function(input, output) {
       heatmap_log_rank_file(file)
     }
   )
-  
+
+  # generate and download the heatmap
+  # as pdf file
   output$heatmap_log_rank_plot_pdf <- downloadHandler(
     filename = function() {
       paste("heatmap", '.pdf', sep = '')
@@ -374,7 +400,9 @@ shinyServer(function(input, output) {
       heatmap_log_rank_file(file)
     }
   )
-  
+
+  # generate and download the heatmap
+  # as eps file
   output$heatmap_log_rank_plot_eps <- downloadHandler(
     filename = function() {
       paste("heatmap", '.eps', sep = '')
@@ -386,7 +414,9 @@ shinyServer(function(input, output) {
       dev.off()
     }
   )
-  
+
+  # generate and download the heatmap
+  # as tiff file
   output$heatmap_log_rank_plot_tiff <- downloadHandler(
     filename = function() {
       paste("heatmap", '.tiff', sep = '')
@@ -395,14 +425,17 @@ shinyServer(function(input, output) {
       heatmap_log_rank_file(file)
     }
   )
-  
+
+  # generate and download the table with log-rank test
+  # p-values
   output$log_rank_table <- renderDataTable({
     if (input$log_rank_table_method == "median")
       test_results_median
     else
       test_results_optimal
   })
-  
+
+  # download p-values as csv file
   output$log_rank_table_csv <- downloadHandler(
     filename = function() {
       paste(input$log_rank_table_method, 'log_rank_test.csv', sep = '')
@@ -414,7 +447,8 @@ shinyServer(function(input, output) {
       write.csv(content, file = file)
     }
   )
-  
+
+  # download p-values as txt file
   output$log_rank_table_txt <- downloadHandler(
     filename = function() {
       paste(input$log_rank_table_method, 'log_rank_test.txt', sep = '')
@@ -426,14 +460,17 @@ shinyServer(function(input, output) {
       write.table(content, file = file)
     }
   )
-  
+
+  # generate interactive HTML table for p-value
   output$survival_data_table <- renderDataTable(survival_data)
-  
+
+  # calculate correlation for methylation
   output$methylation_expression_correlation_table <-
     renderDataTable({
       methylation_expression_correlation()
     })
-  
+
+  # download methylation as csv file
   output$methylation_expression_correlation_csv <- downloadHandler(
     filename = function() {
       paste('file.csv', sep = '')
@@ -443,9 +480,8 @@ shinyServer(function(input, output) {
       write.csv(content, file = file)
     }
   )
-  
-  
-  
+
+  # calculate correlation for methylation
   methylation_expression_correlation <- eventReactive(input$perform_methylation, {
     withProgress(message = "Calculating output. Please Wait...", value = 0,{
     gene <- input$gene6
@@ -455,7 +491,7 @@ shinyServer(function(input, output) {
       expressions_all[, c("bcr_patient_barcode", "dataset", gene)] %>% filter(dataset == cohort) %>% as.data.frame()
     expressions_selected[, gene] <-
       ntile(expressions_selected[, gene], k)
-    
+
     # load files from prats
     files <-
       list.files(path = "data/methylation",
@@ -467,15 +503,16 @@ shinyServer(function(input, output) {
       selected_methylation <-
         rbind(selected_methylation, methylation_part)
     }
-    
+
     selected_methylation <-
       selected_methylation[,!is.na(selected_methylation[1,])]
     methylation_expression <-
       expressions_selected %>% filter(.[[3]] %in% c(1, 10)) %>% mutate(bcr_patient_barcode = substr(bcr_patient_barcode, 1, 12)) %>% inner_join(selected_methylation)
     cpg_islands <- colnames(selected_methylation)[-1]
-    
+
     row_n <- 1
     pvals_list <- list()
+    # repeat for every island of interest
     for (k in cpg_islands) {
       low_expr <-
         methylation_expression[methylation_expression[, 3] == 1 , k]
@@ -498,10 +535,10 @@ shinyServer(function(input, output) {
       incProgress(1/length(cpg_islands), detail = paste("Processing cpg island:", k))
     }
     suppressWarnings(pvals <- bind_rows(pvals_list))
-    
+
     pvals$pvalue <- as.numeric(pvals$pvalue)
     pvals$pvalue_adjusted <- p.adjust(pvals$pvalue, method = "fdr")
-    
+
     pvals_extended <- pvals %>% arrange(pvalue_adjusted) %>%
       mutate(log_odds_ratio =  log2((1 - high_expr_meth_mean) * low_expr_meth_mean /
                                       ((1 - low_expr_meth_mean) * high_expr_meth_mean)
@@ -524,20 +561,22 @@ shinyServer(function(input, output) {
       )],
       by.x = "cpg_island",
       by.y = "Name")
-    
+
     pvals_extended_signif <-
       pvals_extended[pvals_extended$pvalue_adjusted < 0.05 &
                        !is.na(pvals_extended$pvalue_adjusted),] %>%
       filter(abs(high_expr_meth_mean - low_expr_meth_mean) > 0.25) %>%
       arrange(pvalue_adjusted)
-    
+
     if (input$only_significant_results)
       pvals_extended_signif
     else
       pvals_extended
   })
     })
-  
+
+  # add plot of isoforms
+  # compare normal tissue with cancer tissue
   normal_vs_cancer_isoforms_plot_reactive <- reactive({
     plot_data <- all_isoforms[all_isoforms$cohort == input$cohort3 &
                                 all_isoforms$gene == input$gene3 &
@@ -553,7 +592,7 @@ shinyServer(function(input, output) {
       c("Cancer" = "#eeeeee", "Normal" = "#777777")  #c('#eeeeee', '#777777')
     if(!input$boxplot_grey_scale)
     group_colors <- c("Cancer" = "#f00505", "Normal" = "#000000")
-    
+
     p0 <- ggplot(plot_data, aes(isoform, value, fill = group)) +
       geom_boxplot() +
       #coord_cartesian(ylim = ylim1*4) +
@@ -566,11 +605,12 @@ shinyServer(function(input, output) {
         panel.border = element_rect(colour = 'black', fill = NA),
         text = element_text(size = as.integer(input$select_isoform_boxplot_xlab_font))
       )
-    
+
     p0 + scale.isoforms()
-    
+
   })
-  
+
+  # reactive element with list of isoformes that matches selected gene
   output$breaks.isoforms <- renderUI({
     data <- all_isoforms[all_isoforms$cohort == input$cohort3 &
                                 all_isoforms$gene == input$gene3 &
@@ -584,19 +624,15 @@ shinyServer(function(input, output) {
       breaks <- round(10^(seq(0, log10(b), length.out = 5)), digits = 0)
     textInput('breaks.isoforms', 'Breaks', value = toString(breaks))
   })
-  
-  
-  
+
+  # normalisation for isoforms
   scale.isoforms <- reactive({
-    
     if (is.null(input$breaks.isoforms) || '' == input$breaks.isoforms) {
       b <- waiver()
     } else {
       b <- as.numeric(as.list(strsplit(input$breaks.isoforms, ',')[[1]]))
     }
-    
-    
-    
+
     if (!input$boxplot_log_scale) {
       m <- max(input$scale.min, 0)
       scale <- scale_y_continuous(limits = c(m, NA), breaks = b, labels = function(x) format(x, big.mark = "", scientific = F))
@@ -609,14 +645,16 @@ shinyServer(function(input, output) {
       #})
     }
   })
-  
+
+  # plot precalculated and cached plot for isoforms
   output$normal_vs_cancer_isoforms_plot <- renderPlot({
     normal_vs_cancer_isoforms_plot_reactive()
   })
-  
-  
+
+  # download plot for normal vs cancer test
+  # in the tiff/pdf format
   output$download.plot.normal.cancer <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       tumors <- paste(input$cohort3, collapse = ' ')
       sprintf('%s-%s.%s', tumors, input$gene3, input$select.file.type.normal.cancer)
     },
@@ -636,7 +674,8 @@ shinyServer(function(input, output) {
       }
       ggsave(file, plot = normal_vs_cancer_isoforms_plot_reactive(), device = device)
     })
-  
+
+  # precalculate table with statistics for normal/cncer comparisons
   normal_vs_cancer_isoforms_table_reactive <-
     eventReactive(
       input$perform_isoform_table, {
@@ -666,7 +705,7 @@ shinyServer(function(input, output) {
           j <- input$gene_isoform_table
           i <- input$cohort_isoform_table
           genes <- unique(all_isoforms$gene)
-          
+
           isoforms <-
             unique(all_isoforms[all_isoforms$cohort == i & all_isoforms$gene == j, "isoform"])
           normal_group <-
@@ -677,23 +716,21 @@ shinyServer(function(input, output) {
             all_isoforms %>% filter(cohort == i,
                                     gene == j,
                                     substr(bcr_patient_barcode, 14, 15) == "01")
-          
+          # calculate for each isoform
           for (k in isoforms) {
             p_value <- NA
             test_cancer_vs_normal_list[[counter]] <-
               data.frame(i, j, k, p_value)
             try({
-              normal_group_isoform <- normal_group %>% filter(isoform == k) 
-              cancer_group_isoform <- cancer_group %>% filter(isoform == k)   
+              normal_group_isoform <- normal_group %>% filter(isoform == k)
+              cancer_group_isoform <- cancer_group %>% filter(isoform == k)
               p_value <- t.test(normal_group_isoform$value, cancer_group_isoform$value)$p.value
               test_cancer_vs_normal_list[[counter]][1, 4] <- p_value
             }, silent = TRUE)
             counter <- counter + 1
-            
+
           }
-          
-        
-        
+
         test_cancer_vs_normal <- bind_rows(test_cancer_vs_normal_list)
         colnames(test_cancer_vs_normal) <- c("cohort", "gene", "isoform", "pvalue")
         test_cancer_vs_normal %>% filter(p_value != "NA") %>%
@@ -701,11 +738,14 @@ shinyServer(function(input, output) {
           left_join(isoform_name_mapping[, -1])
       })
     })
-  
+
+  # render interactive HTML table
+  # for statistics about normal/cancer comparison
   output$normal_vs_cancer_isoforms_table <- renderDataTable({
     normal_vs_cancer_isoforms_table_reactive()
   }, options = list(pageLength = 10))
-  
+
+  # download isoforms as a csv table
   output$isoform_test_all_csv <- downloadHandler(
     filename = function() {
       paste('normal_vs_caner_tests.csv', sep = '')
@@ -714,7 +754,8 @@ shinyServer(function(input, output) {
       write.csv(normal_vs_cancer_isoforms_table_reactive(), file = file)
     }
   )
-  
+
+  # download isoforms as a txt table
   output$isoform_test_all_txt <- downloadHandler(
     filename = function() {
       paste('normal_vs_caner_tests.txt', sep = '')
@@ -723,19 +764,20 @@ shinyServer(function(input, output) {
       write.table(normal_vs_cancer_isoforms_table_reactive(), file = file)
     }
   )
-  
+
+  # download isoforms as a csv table
   isoform_expressions_plot_reactive <- reactive({
     all_isoforms %>% filter(group == "01" ) %>%
       filter(cohort == input$cohort4, gene == input$gene4) %>%
       #filter(cohort == "BRCA", gene == "ZNF695") %>%
       group_by(cohort, gene, isoform) %>%
       dplyr::summarise(sum_of_expression = sum(value)) -> a
-    
+
     all_isoforms %>% filter(group == "01") %>%
       filter(cohort == input$cohort4, gene == input$gene4) %>%
       group_by(cohort, gene) %>%
       dplyr::summarise(total_expression = sum(value)) -> b
-    
+
     a %>% left_join(b) %>%
       mutate(expr_percentage = 100 * sum_of_expression / total_expression) %>%
       #filter(cohort == input$cohort4, gene == input$gene4) %>%
@@ -744,19 +786,22 @@ shinyServer(function(input, output) {
       coord_flip() +
       xlab("Isoforms") +
       ylab("Expression percentage") +
-      ggtitle(paste(input$gene4, " in ", input$cohort4, sep = "")) + 
+      ggtitle(paste(input$gene4, " in ", input$cohort4, sep = "")) +
       theme(panel.background = element_rect(fill = 'white'),
             panel.border = element_rect(colour = 'black', fill = NA),
             text = element_text(size = as.integer(input$select_isoform_expression_font)))
-      
+
   })
-  
+
+  # volcano plot for isoforms
   output$isoform_expressions_plot <- renderPlot({
     isoform_expressions_plot_reactive()
   })
-  
+
+  # download plot for isoforms
+  # as tiff/pdf file
   output$download_isoform_expression_plot <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       tumors <- paste(input$cohort4, collapse = ' ')
       sprintf('%s-%s.%s', tumors, input$gene4, input$select.file.type.isoform.expression)
     },
@@ -776,37 +821,38 @@ shinyServer(function(input, output) {
       }
       ggsave(file, plot = isoform_expressions_plot_reactive(), device = device)
     })
-  
-  
-  
+
+  # precalculated plot for isoform expression
   all_cohorts_isoform_expressions_plot_reactive <- reactive({
     all_isoforms %>% filter(group == "01") %>%
       group_by(cohort, gene, isoform) %>%
       dplyr::summarise(sum_of_expression = sum(value)) -> a
-    
+
     all_isoforms %>% filter(group == "01") %>%
       group_by(cohort, gene) %>%
       dplyr::summarise(total_expression = sum(value)) -> b
-    
+
     a %>% left_join(b) %>%
       mutate(expr_percentage = 100 * sum_of_expression / total_expression) %>%
       filter(gene == input$gene5) %>%
       ggplot(aes(cohort, expr_percentage)) +
       geom_bar(aes(fill = isoform), stat = "identity") +
       theme(axis.text.x = element_text(angle = -90, hjust = 0)) +
-      ggtitle(paste(input$gene5)) + 
+      ggtitle(paste(input$gene5)) +
       ylab("Expression percentage") +
       theme(panel.background = element_rect(fill = 'white'),
             panel.border = element_rect(colour = 'black', fill = NA),
             text = element_text(size = as.integer(input$select_all_cohorts_isoform_expression_font)))
   })
-  
+
+  # precalculated plot for isoform expression
   output$all_cohorts_isoform_expressions_plot <- renderPlot({
     all_cohorts_isoform_expressions_plot_reactive()
   })
-  
+
+  # download the isoform expression plot as tiff file
   output$download_all_cohorts_isoform_expression_plot <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       sprintf('%s.%s', input$gene5, input$select.file.type.all.cohorts.isoform.expression)
     },
     content = function(file) {
@@ -825,7 +871,8 @@ shinyServer(function(input, output) {
       }
       ggsave(file, plot = all_cohorts_isoform_expressions_plot_reactive(), device = device)
     })
-  
+
+  # download the isoform expression plot as png file
   output$all_cohorts_isoform_expressions_plot_png <-
     downloadHandler(
       filename = function() {
@@ -838,7 +885,8 @@ shinyServer(function(input, output) {
         dev.off()
       }
     )
-  
+
+  # download the isoform expression plot as pdf file
   output$all_cohorts_isoform_expressions_plot_pdf <-
     downloadHandler(
       filename = function() {
@@ -852,8 +900,8 @@ shinyServer(function(input, output) {
         dev.off()
       }
     )
-  
-  
+
+  # precalculate heatmap for expression
   expression_heatmap1_reactive <- function() {
     m <- list(
       l = 65,
@@ -872,7 +920,7 @@ shinyServer(function(input, output) {
     colnames(m) <- gsub(x = colnames(m), pattern = 'Cervical squamous cell', 'Cervix')
     colnames(m) <- gsub(x = colnames(m), pattern = 'Cholangiocarcinoma', 'Bile duct')
     colnames(m) <- gsub(x = colnames(m), pattern = 'Pheochromocytoma and Paraganglioma', 'Neuroendocrine glands')
-    
+
     p <- pheatmap(
       m,
       cellwidth = 20,
@@ -888,19 +936,21 @@ shinyServer(function(input, output) {
     )
     #grid::grid.newpage()
     grid::grid.draw(p$gtable)
-    
+
   }
-  
+
+  # render precalculated plot for gene expressions
   output$expression_heatmap1 <- renderPlot({
     expression_heatmap1_reactive()
   }, height = function() {
-    if(input$all_genes_normal) 
+    if(input$all_genes_normal)
       length(selected_genes_all) * 20 + 300
     else
       length(input$selected_genes_manually) * 20 + 300})
-  
+
+  # download precalculated plot for gene expressions
   output$download_expression_heatmap1 <- downloadHandler(
-    filename = function() { 
+    filename = function() {
      sprintf('%s.%s', "heatmap", input$select_file_type_expression_heatmap)
      # paste("heatmap.", input$select_file_type_expression_heatmap, sep = "")
     },
@@ -918,11 +968,13 @@ shinyServer(function(input, output) {
           postscript(..., width = width, height = height)
         }
       }
-      ggsave(file, 
-             plot = expression_heatmap1_reactive(), 
+      ggsave(file,
+             plot = expression_heatmap1_reactive(),
              device = device(height = length(input$selected_genes_manually)/2 + 2, width = length(input$selected_genes_manually)/2 + 2))
     })
-  
+
+  # render plot for gene expressions
+  # as interactive plotly figure
   output$expression_heatmap2 <- renderPlotly({
     if (input$restrict2) {
       if (input$log_scale2)
@@ -956,17 +1008,11 @@ shinyServer(function(input, output) {
       height = height,
       colors = input$heatmap_color_scale2
     ) %>% layout(margin = m)
-    # color_palette <- colorRampPalette(brewer.pal(nrow(z), input$heatmap_color_scale))
-    # heatmaply(x = z,
-    #           xlab = colnames(z),
-    #           ylab = rownames(z),
-    #           colors = color_palette,
-    #           margins = c(60,100,40,20),
-    #           subplot_heights = c(height, height)
-    #           )
-    
+
   })
-  
+
+  # precalculated normalized expression p-values 
+  # as a table
   normal_expression_pvalues_table <- reactive({
     expressions_normal_long <- expressions_normal %>% gather(gene, expression, HKR1:ZNF99, factor_key=TRUE)
     expressions_normal_long$dataset <- expressions_normal_long$dataset %>%
@@ -1006,11 +1052,11 @@ shinyServer(function(input, output) {
       gsub(pattern = "ucec", replacement = "Uterus (UCEC, UCS)") %>%
       gsub(pattern = "ucs", replacement = "Uterus (UCEC, UCS)") %>%
       gsub(pattern = "uvm", replacement = "Uvea (UVM)")
-      
-    
+
+   # calculation for selected cancers
     expressions_normal_summary <- expressions_normal_long %>%
       filter(dataset != "STES") %>%
-      group_by(dataset, gene) %>% 
+      group_by(dataset, gene) %>%
       dplyr::summarize(
         mean_expression = mean(expression),
         se = sd(expression) / sqrt(n()),
@@ -1019,16 +1065,18 @@ shinyServer(function(input, output) {
         `50%` = quantile(expression, probs = 0.5),
         `75%` = quantile(expression, probs = 0.75),
         n_onservations = n()
-      ) 
-    
+      )
+
   })
-  
+
+  # render table as interactive HTML document
   output$normal_expression_pvalues_table_render <- renderDataTable({
     normal_expression_pvalues_table()
   })
-  
+
+  # download table with p-values
   output$normal_expression_pvalues_table_download <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       sprintf('%s.%s', "pvalues", input$select.normal.table.file.type)
     },
     content = function(file) {
@@ -1037,9 +1085,11 @@ shinyServer(function(input, output) {
       if(input$select.table.file.type == "txt")
         write.table(x = normal_expression_pvalues_table(), file = file)
     })
-  
+
+  # precalculate boxplots with gene expression
+  # for selected cancers
   normal_expression_boxplot_reactive <- reactive({
-    selected_gene_expressions <- expressions_normal %>% 
+    selected_gene_expressions <- expressions_normal %>%
       select("dataset", paste(input$gene_normal_expression)) %>%
       filter(dataset != "COADREAD") %>%
       filter(dataset != "STES")
@@ -1080,8 +1130,8 @@ shinyServer(function(input, output) {
       gsub(pattern = "ucec", replacement = "Uterus (UCEC, UCS)") %>%
       gsub(pattern = "ucs", replacement = "Uterus (UCEC, UCS)") %>%
       gsub(pattern = "uvm", replacement = "Uvea (UVM)")
-    
-    
+
+
     #ylim1 = boxplot.stats(selected_gene_expressions[, 2]) $stats[c(1, 5)]
     ggplot(selected_gene_expressions, aes(dataset, log(selected_gene_expressions[, 2] + 1))) +
       geom_boxplot() +
@@ -1089,18 +1139,20 @@ shinyServer(function(input, output) {
       ylab("log(expression + 1)") +
       scale_fill_manual(values = c("#000000", "#000000")) +
       theme(panel.background = element_rect(fill = 'white'),
-            panel.border = element_rect(colour = 'black', fill = NA)) + 
+            panel.border = element_rect(colour = 'black', fill = NA)) +
       theme(axis.text.x = element_text(angle = 60, hjust = 1, size = input$select_normal_boxplot_font),
             axis.text.y = element_text(size = input$select_normal_boxplot_font))
-      
+
   })
-  
+
+  # render the precalculated plot
   output$normal_expression_boxplot <- renderPlot({
     normal_expression_boxplot_reactive()
   })
-  
+
+  # save precalculated plot as tiff/pdf file
   output$normal_expression_boxplot_download = downloadHandler(
-    filename = function() { 
+    filename = function() {
       sprintf('%s.%s', input$gene_normal_expression, input$select_file_type_expression_boxplot)
     },
     content = function(file) {
@@ -1119,23 +1171,22 @@ shinyServer(function(input, output) {
       }
       ggsave(file, plot = normal_expression_boxplot_reactive(), device = device)
     })
-  
-  ## Kornel's part #####
+
+  ## read precalculaed data about methylation 
   source('data/krabmen/R/read_data.R')
-  
-  ## Boxplots ##########
+
+  ## load precalculated boxplots
   load.datasets()
-  
+
+  # prepare reactive scale 
+  # for plots
   scale <- reactive({
-    
     if (is.null(input$breaks) || '' == input$breaks) {
       b <- waiver()
     } else {
       b <- as.numeric(as.list(strsplit(input$breaks, ',')[[1]]))
     }
-    
-    
-    
+
     if (input$select.scale == 'linear') {
       m <- max(input$scale.min, 0)
       scale <- scale_y_continuous(limits = c(m, NA), breaks = b, labels = function(x) format(x, big.mark = "", scientific = F))
@@ -1147,7 +1198,8 @@ shinyServer(function(input, output) {
       })
     }
   })
-  
+
+  # breaks controler 
   output$breaks <- renderUI({
     data <- filtered.data()
     b <- max(data$expression)
@@ -1157,25 +1209,28 @@ shinyServer(function(input, output) {
       breaks <- round(10^(seq(0, log10(b), length.out = 5)), digits = 0)
     textInput('breaks', 'Breaks', value = toString(breaks))
   })
-  
+
   output$value <- renderPrint({ input$select.tumor })
-  
+
+  # select releveant p-values for selected genes and cancer types
   pvalues.reactive <- function(){
     vals <- pvalues2[pvalues2$gene %in% input$select.gene & pvalues2$tumor %in% input$select.tumor,c('padj', 'tumor', 'gene')]
     vals$padj <- sprintf("%.4f", vals$padj)
-    
+
     vals %>% left_join(summary.all.tumors.long())
   }
-  
-  output$pvalues <- renderDataTable({ 
+
+  # render table with p-values
+  output$pvalues <- renderDataTable({
    pvalues.reactive()
   })
-  
+
+  # generate summary with gene statistics for seleted tumors
   summary.all.tumors.long <- reactive({
-    all.tumors.long2 %>% 
+    all.tumors.long2 %>%
       filter(tumor %in% input$select.tumor) %>%
       filter(gene %in% input$select.gene) %>%
-      group_by(tumor, type, gene) %>% 
+      group_by(tumor, type, gene) %>%
       dplyr::summarize(
       mean_expression = mean(expression),
       se = sd(expression) / sqrt(n()),
@@ -1184,11 +1239,13 @@ shinyServer(function(input, output) {
       `50%` = quantile(expression, probs = 0.5),
       `75%` = quantile(expression, probs = 0.75),
       n_onservations = n()
-    ) 
+    )
   })
-  
+
+  # download p-values with tumor statistics
+  # save as csv or txt
   output$pvalues.download <- downloadHandler(
-    filename = function() { 
+    filename = function() {
             sprintf('%s.%s', "pvalues", input$select.table.file.type)
     },
     content = function(file) {
@@ -1197,47 +1254,48 @@ shinyServer(function(input, output) {
       if(input$select.table.file.type == "txt")
         write.table(x = pvalues.reactive(), file = file)
     })
-  
-  
+
+  # select rows for given tumor and gene
   filtered.data <- reactive({
     filtered <- all.tumors.long2[all.tumors.long2$tumor %in% input$select.tumor, ]
     filtered[filtered$gene %in% input$select.gene, ]
   })
-  
-  
+
+  # plot precalculated boxplots for gene expression
   plotGeneExpression <- function() {
-    
     if (input$greyscale) {
       colors <- scale_fill_manual(values = c('#eeeeee', '#777777'))
     } else {
       colors <- scale_fill_manual(values = c('#aaaaaa', '#ff0000'))
     }
-    
+
     ggplot(filtered.data(), aes(y = expression,
-                                x = tumor, 
-                                fill = factor(type, labels = c('Healthy', 'Tumor')))) + 
+                                x = tumor,
+                                fill = factor(type, labels = c('Healthy', 'Tumor')))) +
       geom_boxplot(alpha = 1, position = position_dodge(0.8)) +
       colors +
       ggtitle('Boxplots for selected tumors') +
       ylab(paste0(input$select.gene, ' expression')) +
-      theme(legend.title=element_blank()) + 
+      theme(legend.title=element_blank()) +
       theme(axis.title.x = element_blank()) +
       theme(axis.title.y = element_text(margin = margin(0, 20, 0, 0))) +
-      theme(axis.text = element_text(colour = 'black')) + 
-      theme(plot.title = element_text(margin = margin(0, 0, 20, 0))) + 
+      theme(axis.text = element_text(colour = 'black')) +
+      theme(plot.title = element_text(margin = margin(0, 0, 20, 0))) +
       theme(text = element_text(size = input$input.font.size)) +
       theme(panel.background = element_rect(fill = 'white'),
             panel.grid.major = element_blank(),
-            panel.border = element_rect(colour = 'black', fill = NA)) + 
+            panel.border = element_rect(colour = 'black', fill = NA)) +
       scale() + facet_wrap(~gene)
   }
-  
+
+  # plot precalculated boxplots for gene expression
   output$distPlot <- renderPlot({
     plotGeneExpression()
   })
-  
+
+  # download boxplots for gene expressions
   output$download.plot = downloadHandler(
-    filename = function() { 
+    filename = function() {
       tumors <- paste(input$select.tumor, collapse = ' ')
       sprintf('%s-%s.%s', tumors, input$select.gene, input$select.file.type)
     },
@@ -1257,20 +1315,12 @@ shinyServer(function(input, output) {
       }
       ggsave(file, plot = plotGeneExpression(), device = device)
     })
-  
+
   ## Boxplots subtypes##
   tumor.data <- .tumor.data()
-  
-  # output$breaks.subtypes <- renderUI({
-  #   data <- filtered.data.subtypes()
-  #   b <- max(data$expression)
-  #   if(input$select.scale.subtypes == "linear")
-  #     breaks <- round(seq(input$scale.min.subtypes, b, length.out = 5), digits = 0)
-  #   else
-  #     breaks <- round(10^(seq(0, log10(b), length.out = 5)), digits = 0)
-  #   textInput('breaks.subtypes', 'Breaks', value = toString(breaks))
-  # })
-  
+
+  # different scales for different subtypes
+  # select proper scale
   breaks.subtypes <- function(){
     data2 <- filtered.data.subtypes()
 
@@ -1280,18 +1330,10 @@ shinyServer(function(input, output) {
     else
       breaks <- round(10^(seq(0, log10(b), length.out = 5)), digits = 0)
   }
-  
+
   scale.subtypes <- reactive({
-    
-    # if (is.null(input$breaks.subtypes) || '' == input$breaks.subtypes) {
-    #   b <- waiver()
-    # } else {
-    #   b <- as.numeric(as.list(strsplit(input$breaks.subtypes, ',')[[1]]))
-    # }
     b <- breaks.subtypes()
-    
-    
-    
+
     if (input$select.scale.subtypes == 'linear') {
       m <- max(input$scale.min.subtypes, 0)
       scale <- scale_y_continuous(limits = c(m, NA), breaks = b, labels = function(x) format(x, big.mark = "", scientific = F))
@@ -1303,67 +1345,57 @@ shinyServer(function(input, output) {
       })
     }
   })
-  
+
   generatePlot.subtypes <- function(){
     if (is.null(input$breaks.subtypes) || '' == input$breaks.subtypes) {
       b <- waiver()
     } else {
       b <- as.numeric(as.list(strsplit(input$breaks.subtypes, ',')[[1]]))
     }
-    
+
     if (input$select.scale.subtypes == 'linear') {
       m <- max(input$scale.min.subtypes, 0)
       scale <- scale_y_continuous(limits = c(m, NA), breaks = b, labels = function(x) format(x, big.mark = "", scientific = F))
     } else {
-      # m <- max(input$scale.min.subtypes, 0.01)
-      # b <- b[which(b >= m)]
-      #
-      # if (max(filtered.data.subtypes()$expression) < max(b)) {
-      #   limit <- max(b)
-      # } else {
-      #   limit <- NA
-      # }
-      #
-      # scale <- scale_y_log10(limits = c(m, limit), breaks = b, labels = function(x) {
-      #   c(format(x[which(x < 1)], nsmall = 2), format(x[which(x >= 1)], nsmall = 0))
-      # })
       scale <- scale_y_log10()
     }
     scale <- scale.subtypes()
     if (input$rotate.x.axis.subtypes == T) {
-      rotate <- theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+      rotate <- theme(axis.text.x = element_text(angle = 90, hjust = 1))
     } else {
       rotate <- theme()
     }
-    
+
     data <- filtered.data.subtypes()
     data[, c(input$subtypes)] <- gsub(x = data[, c(input$subtypes)], " ", " \n")
-    
-    ggplot(data, aes_string(y = 'expression', x = input$subtypes)) + 
-      geom_boxplot(alpha = 1, position = position_dodge(0.8)) + 
+
+    ggplot(data, aes_string(y = 'expression', x = input$subtypes)) +
+      geom_boxplot(alpha = 1, position = position_dodge(0.8)) +
       ggtitle(input$subtypes) +
       ylab(paste0(input$gene.names.subtypes, ' expression')) +
-      theme(legend.title = element_blank()) + 
+      theme(legend.title = element_blank()) +
       theme(axis.title.x = element_blank()) +
       theme(axis.title.y = element_text(margin = margin(0, 20, 0, 0))) +
-      theme(axis.text = element_text(colour = 'black')) + 
-      theme(plot.title = element_text(margin = margin(0, 0, 20, 0))) + 
-      theme(text = element_text(size = input$input.font.size.subtypes)) + 
+      theme(axis.text = element_text(colour = 'black')) +
+      theme(plot.title = element_text(margin = margin(0, 0, 20, 0))) +
+      theme(text = element_text(size = input$input.font.size.subtypes)) +
       rotate +
-      scale + 
+      scale +
       theme(panel.background = element_rect(fill = 'white'),
             panel.grid.major = element_blank(),
-            panel.border = element_rect(colour = 'black', fill = NA)) + 
-      facet_wrap(~gene) 
+            panel.border = element_rect(colour = 'black', fill = NA)) +
+      facet_wrap(~gene)
     #theme(text = element_text(size=20))
   }
-  
+
+  # precalculated table with p-values for subtypes
+  # read precalculated data
   renderPvaluesTable.subtypes <- reactive({
     path <- file.path('data/krabmen/boxplots-subtypes/resources', input$tumor.name.subtypes, paste0(input$subtypes, '.RData'))
-    
+
     df <- local(get(load(path)))
     path_all <- file.path('data/krabmen/boxplots-subtypes/resources', paste0(input$tumor.name.subtypes, '.RData'))
-    summarised <- local(get(load(path_all))) %>% 
+    summarised <- local(get(load(path_all))) %>%
       select(tumor, gene, expression, input$subtypes) %>%
       mutate(subtype = .[[4]]) %>%
       group_by(tumor, gene, subtype) %>%
@@ -1375,16 +1407,16 @@ shinyServer(function(input, output) {
         `50%` = quantile(expression, probs = 0.5),
         `75%` = quantile(expression, probs = 0.75),
         n_onservations = n()
-      ) 
-      
-    
+      )
+
+
     df[df$gene %in% input$gene.names.subtypes,] %>% cbind(input$tumor.name.subtypes) %>% left_join(summarised)
   })
-  
+
+  # dynamic UI element for selected tumors
   output$subtypes <- renderUI({
-    
     df <- tumor.data[[input$tumor.name.subtypes]]
-    
+
     choices <- setdiff(colnames(df), c('gene', 'expression', 'tumor', 'overall_survival', 'disease_status'))
     if(input$tumor.name.subtypes== "ESCA")
       choices <- setdiff(choices, c("clinical_M"))
@@ -1393,72 +1425,70 @@ shinyServer(function(input, output) {
     if(input$tumor.name.subtypes== "KIRP")
       choices <- setdiff(choices, c( "pathologic_N2", "clinical_M"))
     if(input$tumor.name.subtypes== "LIHC")
-      choices <- setdiff(choices, c( "Hypermethylation.cluster.laird.groups.", 
-                                     "Hypermethylation.cluster.laird.groups.1", 
-                                     "Hypomethylation.cluster.laird.groups.", 
+      choices <- setdiff(choices, c( "Hypermethylation.cluster.laird.groups.",
+                                     "Hypermethylation.cluster.laird.groups.1",
+                                     "Hypomethylation.cluster.laird.groups.",
                                      "Hypomethylation.cluster.laird.groups.1"))
     if(input$tumor.name.subtypes== "THCA")
       choices <- setdiff(choices, c("meth_Cluster_number", "mRNA_Cluster_number_Feb2014", "meth_Cluster_number_Feb2014"))
     if(input$tumor.name.subtypes== "UCEC")
       choices <- setdiff(choices, c("IntegrativeCluster", "mrna_expression_cluster"))
-    
+
     selectInput('subtypes', label = 'Subtypes', choices = levels(factor(choices)), selected = choices[1])
   })
-  
-  
-  
+
+  # prepare selection for subtypes 
+  # depends on given tumor
   output$subtype.values <- renderUI({
     if (length(input$subtypes) > 0) {
       df <- tumor.data[[input$tumor.name.subtypes]]
-      
-      # TODO: fires on change of input$tumor.name before input$subtypes is refreshed
+
       if (input$subtypes %in% colnames(df)) {
-        choices <- setdiff(unique(df[,c(input$subtypes)]), 
+        choices <- setdiff(unique(df[,c(input$subtypes)]),
                            c("NA", "Unknown",  "Not evaluated", "Performed but not available", "not performer", "indeterminate, equivocal", "N/A", "Notassigned",
                              "Not Available"))
-        
-        
+
         selectInput('subtype.values', label = 'Subtype values', choices = levels(factor(choices)), selected = choices, multiple = T)
       }
     }
-    
+
   })
-  
+
+  # prepare data about subtypes - reactive
   filtered.data.subtypes <- reactive({
     df <- tumor.data[[input$tumor.name.subtypes]]
-    
-    # Selected subtype 
+
+    # Selected subtype
     df <- df[, c('expression', 'gene', input$subtypes)]
-    
+
     # Filter genes
     df <- df[df$gene %in% input$gene.names.subtypes, ]
-    
+
     # Filter subtype values
     df <- df[df[, c(input$subtypes)] %in% input$subtype.values, ]
-    
+
     df[, c(input$subtypes)] <- ordered(df[, c(input$subtypes)], levels = input$subtype.values)
-    
+
     df
   })
-  
+
   output$apply.subtypes <- renderUI({
     actionButton('apply.subtypes', 'Apply')
   })
-  
+
   output$pvalues.subtypes <- renderDataTable({
     renderPvaluesTable.subtypes()
   })
-  
+
   output$distPlot.subtypes <- renderPlot({
     generatePlot.subtypes()
   })
-  
+
+  # download data about subtypes
   output$plot.subtypes.download = downloadHandler(
     filename = function() {
       sprintf(
         'plot.%s',
-        # input$tumor.name.subtypes,
-        # input$subtypes,
         input$select.file.type.subtypes
       )
     },
@@ -1482,7 +1512,7 @@ shinyServer(function(input, output) {
           postscript(..., width = width, height = height)
         }
       }
-      
+
       ggsave(
         file,
         plot = generatePlot.subtypes(),
@@ -1493,9 +1523,11 @@ shinyServer(function(input, output) {
       )
     }
   )
-  
+
+  # download table with p-values for subtypes
+  # as csv file
   output$table.subtypes.download <- downloadHandler(
-    filename = function() { 
+    filename = function() {
       sprintf('%s.%s', "pvalues", input$select.table.subtypes.file.type)
     },
     content = function(file) {
@@ -1504,15 +1536,14 @@ shinyServer(function(input, output) {
       if(input$select.table.subtypes.file.type == "txt")
         write.table(x = renderPvaluesTable.subtypes(), file = file)
     })
-  
-  
+
+  # download description for clinical paramters
+  # as pdf file
   output$clinical.parameters.description <- downloadHandler(
     filename = "clinical_parameters.pdf",
     content = function(file) {
       file.copy("data/clinical_parameters.pdf", file)
     }
   )
-  
-  ######################
-  
-}) 
+
+})
