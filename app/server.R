@@ -31,7 +31,7 @@ shinyServer(function(input, output) {
   load("data/selected_genes_all.RData")
   load("data/selected_genes_all_restricted.RData")
   #load("data/test_cancer_vs_normal.rda")
-  
+
   # selected genes to compare
   selected_group <- c(
     "ZNF695",
@@ -79,6 +79,7 @@ shinyServer(function(input, output) {
     limit_time <-
       max(max(selected_data[selected_data[, "expression"] == "low", "times"]),
           max(selected_data[selected_data[, "expression"] == "high", "times"]))
+    cutpoint_selected <-
     n_low <-
       length(selected_data[selected_data[, "expression"] == "low", "times"])
     n_high <-
@@ -344,7 +345,7 @@ shinyServer(function(input, output) {
     grid::grid.draw(hm$gtable)
   }
 
-  # generate heatmap 
+  # generate heatmap
   # for p-values for log-rank plot
   output$heatmap_log_rank_plot <- renderPlot({
     par(mar = c(5, 6, 4, 1) + .1)
@@ -484,96 +485,98 @@ shinyServer(function(input, output) {
   # calculate correlation for methylation
   methylation_expression_correlation <- eventReactive(input$perform_methylation, {
     withProgress(message = "Calculating output. Please Wait...", value = 0,{
-    gene <- input$gene6
-    cohort <- input$cohort6
-    k <- 10
-    expressions_selected <-
-      expressions_all[, c("bcr_patient_barcode", "dataset", gene)] %>% filter(dataset == cohort) %>% as.data.frame()
-    expressions_selected[, gene] <-
-      ntile(expressions_selected[, gene], k)
+      gene <- input$gene6
+      cohort <- input$cohort6
+      k <- 10
+      expressions_selected <-
+        expressions_all[, c("bcr_patient_barcode", "dataset", gene)] %>% filter(dataset == cohort) %>% as.data.frame()
+      expressions_selected[, gene] <-
+        ntile(expressions_selected[, gene], k)
 
-    # load files from prats
-    files <-
-      list.files(path = "data/methylation",
-                 pattern = cohort,
-                 full.names = TRUE)
-    selected_methylation <- data.frame()
-    for (file in files) {
-      load(file)
+      # load files from prats
+      files <-
+        list.files(path = "data/methylation",
+                   pattern = cohort,
+                   full.names = TRUE)
+      selected_methylation <- data.frame()
+      for (file in files) {
+        load(file)
+        selected_methylation <-
+          rbind(selected_methylation, methylation_part)
+      }
+
       selected_methylation <-
-        rbind(selected_methylation, methylation_part)
-    }
+        selected_methylation[,!is.na(selected_methylation[1,])]
+      methylation_expression <-
+        expressions_selected %>% filter(.[[3]] %in% c(1, 10)) %>% mutate(bcr_patient_barcode = substr(bcr_patient_barcode, 1, 12)) %>% inner_join(selected_methylation)
+      cpg_islands <- colnames(selected_methylation)[-1]
 
-    selected_methylation <-
-      selected_methylation[,!is.na(selected_methylation[1,])]
-    methylation_expression <-
-      expressions_selected %>% filter(.[[3]] %in% c(1, 10)) %>% mutate(bcr_patient_barcode = substr(bcr_patient_barcode, 1, 12)) %>% inner_join(selected_methylation)
-    cpg_islands <- colnames(selected_methylation)[-1]
+      row_n <- 1
+      pvals_list <- list()
+      # repeat for every island of interest
+      for (k in cpg_islands) {
+        low_expr <-
+          methylation_expression[methylation_expression[, 3] == 1 , k]
+        high_expr <-
+          methylation_expression[methylation_expression[, 3] == 10 , k]
+        pvalue <- NA
+        try({
+          test <- t.test(low_expr, high_expr)
+          fc <- mean(low_expr)/mean(high_expr)
+          pvalue <- test$p.value
+        }, silent = TRUE)
+        pvals_list[[row_n]] <- data.frame(
+          "cohort" = cohort,
+          "gene" = gene,
+          "cpg_island" = k,
+          "pvalue" = pvalue,
+          "low_expr_meth_mean" = mean(low_expr, na.rm = TRUE),
+          "high_expr_meth_mean" = mean(high_expr, na.rm = TRUE),
+          "fold_change" = fc
+        )
+        row_n <- row_n + 1
+        incProgress(1/length(cpg_islands), detail = paste("Processing cpg island:", k))
+      }
+      suppressWarnings(pvals <- bind_rows(pvals_list))
 
-    row_n <- 1
-    pvals_list <- list()
-    # repeat for every island of interest
-    for (k in cpg_islands) {
-      low_expr <-
-        methylation_expression[methylation_expression[, 3] == 1 , k]
-      high_expr <-
-        methylation_expression[methylation_expression[, 3] == 10 , k]
-      pvalue <- NA
-      try({
-        test <- t.test(low_expr, high_expr)
-        pvalue <- test$p.value
-      }, silent = TRUE)
-      pvals_list[[row_n]] <- data.frame(
-        "cohort" = cohort,
-        "gene" = gene,
-        "cpg_island" = k,
-        "pvalue" = pvalue,
-        "low_expr_meth_mean" = mean(low_expr, na.rm = TRUE),
-        "high_expr_meth_mean" = mean(high_expr, na.rm = TRUE)
-      )
-      row_n <- row_n + 1
-      incProgress(1/length(cpg_islands), detail = paste("Processing cpg island:", k))
-    }
-    suppressWarnings(pvals <- bind_rows(pvals_list))
+      pvals$pvalue <- as.numeric(pvals$pvalue)
+      pvals$pvalue_adjusted <- p.adjust(pvals$pvalue, method = "fdr")
 
-    pvals$pvalue <- as.numeric(pvals$pvalue)
-    pvals$pvalue_adjusted <- p.adjust(pvals$pvalue, method = "fdr")
+      pvals_extended <- pvals %>% arrange(pvalue_adjusted) %>%
+        mutate(log_odds_ratio =  log2((1 - high_expr_meth_mean) * low_expr_meth_mean /
+                                        ((1 - low_expr_meth_mean) * high_expr_meth_mean)
+        )) %>%
+        merge(illumina_humanmethylation_27_data[, c(
+          "Name",
+          "Gene_ID",
+          "Symbol",
+          "TSS_Coordinate",
+          "Distance_to_TSS",
+          "CPG_ISLAND",
+          "CHR",
+          "MAPINFO",
+          "UCSC_REFGENE_NAME",
+          "UCSC_REFGENE_GROUP",
+          "RELATION_TO_UCSC_CPG_ISLAND",
+          "Gene_Strand",
+          "Accession",
+          "Product"
+        )],
+        by.x = "cpg_island",
+        by.y = "Name")
 
-    pvals_extended <- pvals %>% arrange(pvalue_adjusted) %>%
-      mutate(log_odds_ratio =  log2((1 - high_expr_meth_mean) * low_expr_meth_mean /
-                                      ((1 - low_expr_meth_mean) * high_expr_meth_mean)
-      )) %>%
-      merge(illumina_humanmethylation_27_data[, c(
-        "Name",
-        "Gene_ID",
-        "Symbol",
-        "TSS_Coordinate",
-        "Distance_to_TSS",
-        "CPG_ISLAND",
-        "CHR",
-        "MAPINFO",
-        "UCSC_REFGENE_NAME",
-        "UCSC_REFGENE_GROUP",
-        "RELATION_TO_UCSC_CPG_ISLAND",
-        "Gene_Strand",
-        "Accession",
-        "Product"
-      )],
-      by.x = "cpg_island",
-      by.y = "Name")
+      pvals_extended_signif <-
+        pvals_extended[pvals_extended$pvalue_adjusted < 0.05 &
+                         !is.na(pvals_extended$pvalue_adjusted),] %>%
+        filter(abs(high_expr_meth_mean - low_expr_meth_mean) > 0.25) %>%
+        arrange(pvalue_adjusted)
 
-    pvals_extended_signif <-
-      pvals_extended[pvals_extended$pvalue_adjusted < 0.05 &
-                       !is.na(pvals_extended$pvalue_adjusted),] %>%
-      filter(abs(high_expr_meth_mean - low_expr_meth_mean) > 0.25) %>%
-      arrange(pvalue_adjusted)
-
-    if (input$only_significant_results)
-      pvals_extended_signif
-    else
-      pvals_extended
-  })
+      if (input$only_significant_results)
+        pvals_extended_signif
+      else
+        pvals_extended
     })
+  })
 
   # add plot of isoforms
   # compare normal tissue with cancer tissue
@@ -591,7 +594,7 @@ shinyServer(function(input, output) {
     group_colors <-
       c("Cancer" = "#eeeeee", "Normal" = "#777777")  #c('#eeeeee', '#777777')
     if(!input$boxplot_grey_scale)
-    group_colors <- c("Cancer" = "#f00505", "Normal" = "#000000")
+      group_colors <- c("Cancer" = "#f00505", "Normal" = "#000000")
 
     p0 <- ggplot(plot_data, aes(isoform, value, fill = group)) +
       geom_boxplot() +
@@ -613,8 +616,8 @@ shinyServer(function(input, output) {
   # reactive element with list of isoformes that matches selected gene
   output$breaks.isoforms <- renderUI({
     data <- all_isoforms[all_isoforms$cohort == input$cohort3 &
-                                all_isoforms$gene == input$gene3 &
-                                all_isoforms$group %in% c("01", "11"), ] %>%
+                           all_isoforms$gene == input$gene3 &
+                           all_isoforms$group %in% c("01", "11"), ] %>%
       mutate(group = sub(group, pattern = "01", replacement = "Cancer")) %>%
       mutate(group = sub(group, pattern = "11", replacement = "Normal"))
     b <- max(data$value)
@@ -679,29 +682,29 @@ shinyServer(function(input, output) {
   normal_vs_cancer_isoforms_table_reactive <-
     eventReactive(
       input$perform_isoform_table, {
-      withProgress(message = "Calculating output. Please Wait...", value = 0, {
-        isoform_name_mapping <- read.table(file = "data/knownToRefSeq.txt")
-        colnames(isoform_name_mapping) <- c("isoform", "GenBank_name")
-        isoform_name_mapping$isoform_cut <-
-          substr(isoform_name_mapping$isoform, 1, 8)
-        isoform_summary_table_tmp <-
-          all_isoforms %>% filter(cohort == input$cohort_isoform_table & gene == input$gene_isoform_table) %>%
-          filter(group %in% c("01", "11")) %>%
-          mutate(group = sub(x = group, "01", "cancer tissue")) %>%
-          mutate(group = sub(x = group, "11", "normal tissue")) %>%
-          group_by(cohort, gene, isoform, group) %>%
-          dplyr::summarize(
-            mean_expression = mean(value),
-            se = sd(value) / sqrt(n()),
-            median_expression = median(value),
-            `25%` = quantile(value, probs = 0.25, na.rm = TRUE),
-            `50%` = quantile(value, probs = 0.5),
-            `75%` = quantile(value, probs = 0.75),
-            n_observations = n()
-          ) %>%
-          mutate(isoform_cut = substr(isoform, 1, 8))
-        counter <- 1
-        test_cancer_vs_normal_list <- list()
+        withProgress(message = "Calculating output. Please Wait...", value = 0, {
+          isoform_name_mapping <- read.table(file = "data/knownToRefSeq.txt")
+          colnames(isoform_name_mapping) <- c("isoform", "GenBank_name")
+          isoform_name_mapping$isoform_cut <-
+            substr(isoform_name_mapping$isoform, 1, 8)
+          isoform_summary_table_tmp <-
+            all_isoforms %>% filter(cohort == input$cohort_isoform_table & gene == input$gene_isoform_table) %>%
+            filter(group %in% c("01", "11")) %>%
+            mutate(group = sub(x = group, "01", "cancer tissue")) %>%
+            mutate(group = sub(x = group, "11", "normal tissue")) %>%
+            group_by(cohort, gene, isoform, group) %>%
+            dplyr::summarize(
+              mean_expression = mean(value),
+              se = sd(value) / sqrt(n()),
+              median_expression = median(value),
+              `25%` = quantile(value, probs = 0.25, na.rm = TRUE),
+              `50%` = quantile(value, probs = 0.5),
+              `75%` = quantile(value, probs = 0.75),
+              n_observations = n()
+            ) %>%
+            mutate(isoform_cut = substr(isoform, 1, 8))
+          counter <- 1
+          test_cancer_vs_normal_list <- list()
           j <- input$gene_isoform_table
           i <- input$cohort_isoform_table
           genes <- unique(all_isoforms$gene)
@@ -719,25 +722,28 @@ shinyServer(function(input, output) {
           # calculate for each isoform
           for (k in isoforms) {
             p_value <- NA
+            fold_change <- NA
             test_cancer_vs_normal_list[[counter]] <-
-              data.frame(i, j, k, p_value)
+              data.frame(i, j, k, p_value, fold_change)
             try({
               normal_group_isoform <- normal_group %>% filter(isoform == k)
               cancer_group_isoform <- cancer_group %>% filter(isoform == k)
               p_value <- t.test(normal_group_isoform$value, cancer_group_isoform$value)$p.value
+              fc <- mean(normal_group_isoform$value)/mean(cancer_group_isoform$value)
               test_cancer_vs_normal_list[[counter]][1, 4] <- p_value
+              test_cancer_vs_normal_list[[counter]][1, 5] <- fc
             }, silent = TRUE)
             counter <- counter + 1
 
           }
 
-        test_cancer_vs_normal <- bind_rows(test_cancer_vs_normal_list)
-        colnames(test_cancer_vs_normal) <- c("cohort", "gene", "isoform", "pvalue")
-        test_cancer_vs_normal %>% filter(p_value != "NA") %>%
-          left_join(isoform_summary_table_tmp) %>%
-          left_join(isoform_name_mapping[, -1])
+          test_cancer_vs_normal <- bind_rows(test_cancer_vs_normal_list)
+          colnames(test_cancer_vs_normal) <- c("cohort", "gene", "isoform", "pvalue","fold_change")
+          test_cancer_vs_normal %>% filter(p_value != "NA") %>%
+            left_join(isoform_summary_table_tmp) %>%
+            left_join(isoform_name_mapping[, -1])
+        })
       })
-    })
 
   # render interactive HTML table
   # for statistics about normal/cancer comparison
@@ -951,8 +957,8 @@ shinyServer(function(input, output) {
   # download precalculated plot for gene expressions
   output$download_expression_heatmap1 <- downloadHandler(
     filename = function() {
-     sprintf('%s.%s', "heatmap", input$select_file_type_expression_heatmap)
-     # paste("heatmap.", input$select_file_type_expression_heatmap, sep = "")
+      sprintf('%s.%s', "heatmap", input$select_file_type_expression_heatmap)
+      # paste("heatmap.", input$select_file_type_expression_heatmap, sep = "")
     },
     content = function(file) {
       if (input$select_file_type_expression_heatmap == 'tiff') {
@@ -1011,7 +1017,7 @@ shinyServer(function(input, output) {
 
   })
 
-  # precalculated normalized expression p-values 
+  # precalculated normalized expression p-values
   # as a table
   normal_expression_pvalues_table <- reactive({
     expressions_normal_long <- expressions_normal %>% gather(gene, expression, HKR1:ZNF99, factor_key=TRUE)
@@ -1053,7 +1059,7 @@ shinyServer(function(input, output) {
       gsub(pattern = "ucs", replacement = "Uterus (UCEC, UCS)") %>%
       gsub(pattern = "uvm", replacement = "Uvea (UVM)")
 
-   # calculation for selected cancers
+    # calculation for selected cancers
     expressions_normal_summary <- expressions_normal_long %>%
       filter(dataset != "STES") %>%
       group_by(dataset, gene) %>%
@@ -1172,13 +1178,13 @@ shinyServer(function(input, output) {
       ggsave(file, plot = normal_expression_boxplot_reactive(), device = device)
     })
 
-  ## read precalculaed data about methylation 
+  ## read precalculaed data about methylation
   source('data/krabmen/R/read_data.R')
 
   ## load precalculated boxplots
   load.datasets()
 
-  # prepare reactive scale 
+  # prepare reactive scale
   # for plots
   scale <- reactive({
     if (is.null(input$breaks) || '' == input$breaks) {
@@ -1199,7 +1205,7 @@ shinyServer(function(input, output) {
     }
   })
 
-  # breaks controler 
+  # breaks controler
   output$breaks <- renderUI({
     data <- filtered.data()
     b <- max(data$expression)
@@ -1222,7 +1228,7 @@ shinyServer(function(input, output) {
 
   # render table with p-values
   output$pvalues <- renderDataTable({
-   pvalues.reactive()
+    pvalues.reactive()
   })
 
   # generate summary with gene statistics for seleted tumors
@@ -1232,21 +1238,21 @@ shinyServer(function(input, output) {
       filter(gene %in% input$select.gene) %>%
       group_by(tumor, type, gene) %>%
       dplyr::summarize(
-      mean_expression = mean(expression),
-      se = sd(expression) / sqrt(n()),
-      median_expression = median(expression),
-      `25%` = quantile(expression, probs = 0.25, na.rm = TRUE),
-      `50%` = quantile(expression, probs = 0.5),
-      `75%` = quantile(expression, probs = 0.75),
-      n_observations = n()
-    )
+        mean_expression = mean(expression),
+        se = sd(expression) / sqrt(n()),
+        median_expression = median(expression),
+        `25%` = quantile(expression, probs = 0.25, na.rm = TRUE),
+        `50%` = quantile(expression, probs = 0.5),
+        `75%` = quantile(expression, probs = 0.75),
+        n_observations = n()
+      )
   })
 
   # download p-values with tumor statistics
   # save as csv or txt
   output$pvalues.download <- downloadHandler(
     filename = function() {
-            sprintf('%s.%s', "pvalues", input$select.table.file.type)
+      sprintf('%s.%s', "pvalues", input$select.table.file.type)
     },
     content = function(file) {
       if(input$select.table.file.type == "csv")
@@ -1269,10 +1275,13 @@ shinyServer(function(input, output) {
       colors <- scale_fill_manual(values = c('#aaaaaa', '#ff0000'))
     }
 
+    set.seed(1)
     ggplot(filtered.data(), aes(y = expression,
                                 x = tumor,
-                                fill = factor(type, labels = c('Healthy', 'Tumor')))) +
-      geom_boxplot(alpha = 1, position = position_dodge(0.8)) +
+                                fill = factor(type, labels = c('Healthy', 'Tumor')),
+                                color = factor(type, labels = c('Healthy', 'Tumor')))) +
+      geom_boxplot(alpha = 1, position = position_dodge(0.8), coef = 1000) +
+      geom_point(alpha = 0.5, position = position_jitter(width = 0.1)) +
       colors +
       ggtitle('Boxplots for selected tumors') +
       ylab(paste0(input$select.gene, ' expression')) +
@@ -1437,7 +1446,7 @@ shinyServer(function(input, output) {
     selectInput('subtypes', label = 'Subtypes', choices = levels(factor(choices)), selected = choices[1])
   })
 
-  # prepare selection for subtypes 
+  # prepare selection for subtypes
   # depends on given tumor
   output$subtype.values <- renderUI({
     if (length(input$subtypes) > 0) {
@@ -1545,5 +1554,7 @@ shinyServer(function(input, output) {
       file.copy("data/clinical_parameters.pdf", file)
     }
   )
+
+
 
 })

@@ -128,12 +128,12 @@ navbarPage(
 
                '
              )
-             )),
+           )),
            br(),
            br(),
            tags$a(img(src = "MI2_logo.jpg", width = "100px", height = "100px", align = "left"), href = "http://mi2.mini.pw.edu.pl/index.php/mi2-datalab/"),
            tags$a(img(src = "tcga_logo.svg", width = "400px", height = "100px", align = "left"), href = "https://cancergenome.nih.gov/")
-           ),
+  ),
   tabPanel("Expression in Tumor vs Normal",
            sidebarLayout(
              sidebarPanel(
@@ -183,7 +183,12 @@ navbarPage(
              ),
              mainPanel(
                plotOutput('distPlot'),
-               dataTableOutput(outputId = 'pvalues')
+               dataTableOutput(outputId = 'pvalues'),
+               HTML("Legend: <br>
+                    se - standard error, <br>
+                    25% - 1st quartile, 25 centile,<br>
+                    50% - median, 2nd quartile, 50 centile,<br>
+                    75% - 3rd quartile, 75 centile.")
              )
            )),
   tabPanel("Clinical Parameters",
@@ -274,14 +279,14 @@ navbarPage(
                  checkboxInput(
                    "show_conf_int",
                    "Show confidence interval",
-                   value = FALSE,
+                   value = TRUE,
                    width = NULL
                  ),
                  selectInput(
                    "conf_int_style",
                    "Choose confidence interval style",
                    c("ribbon", "step"),
-                   selected = "step"
+                   selected = "ribbon"
                  ),
                  sliderInput(
                    "survival_font_main",
@@ -433,7 +438,7 @@ navbarPage(
               Heatmap representing p-values for the log-rank test for each pair of gene and cohort. A low p-value indicates a significant difference in survival. To customize the gene list delete all the genes from the box (Ctrl+A+Del) and select preferred ones via dropdown menu.
               p-values are after the FDR correction. The darkest color corresponds to the p-value < 0.1. Additional dendrograms help to understand which genes and which tumors are more similar to each other."
             )
-            )),
+          )),
           selectInput(
             "method",
             "Choose cutpoint method",
@@ -448,7 +453,7 @@ navbarPage(
             "heatmap_log_rank_scale",
             "Select color scale",
             choices = rownames(RColorBrewer::brewer.pal.info),
-            selected = "Greys"
+            selected = "Purples"
           ),
           checkboxInput("all_genes_logrank", "Select all genes", value = TRUE),
           selectInput(
@@ -484,32 +489,32 @@ navbarPage(
                       selected = 1),
           downloadButton('download_heatmap_log_rank'),
           width = 3
-            ),
+        ),
         mainPanel(plotOutput("heatmap_log_rank_plot", width = "100%"))
-        )
-  ),
-  tabPanel(
-    "Log-rank test tables",
-    sidebarLayout(
-      sidebarPanel(
-        wellPanel(helpText(
-          HTML(
-            "This panel helps to understand which genes are linked with survival in particular tumors. It supplements the heatmap presented in previous tab.<br><br>
-              A table containing results of a log-rank test (null hypothesis = the two groups have identical survival and hazard functions) comparing survival of patients from two groups (a low and high group of expression of a given gene for each cohort separately chosen according to the median or optimal cutpoint). For each cohort and gene, we provide p-value of a log-rank test, numbers of observations in both groups and hazard ratio."
-        )
-          )),
-        selectInput(
-          "log_rank_table_method",
-          "Choose cutpoint method",
-          choices = c("median", "max-rank statistic")
-        ),
-        downloadButton(outputId = "log_rank_table_csv", label = "Download CSV table"),
-        downloadButton(outputId = "log_rank_table_txt", label = "Download TXT table")
-        ),
-      mainPanel(dataTableOutput("log_rank_table"))
-        )
       )
     ),
+    tabPanel(
+      "Log-rank test tables",
+      sidebarLayout(
+        sidebarPanel(
+          wellPanel(helpText(
+            HTML(
+              "This panel helps to understand which genes are linked with survival in particular tumors. It supplements the heatmap presented in previous tab.<br><br>
+              A table containing results of a log-rank test (null hypothesis = the two groups have identical survival and hazard functions) comparing survival of patients from two groups (a low and high group of expression of a given gene for each cohort separately chosen according to the median or optimal cutpoint). For each cohort and gene, we provide p-value of a log-rank test, numbers of observations in both groups and hazard ratio."
+            )
+          )),
+          selectInput(
+            "log_rank_table_method",
+            "Choose cutpoint method",
+            choices = c("median", "max-rank statistic")
+          ),
+          downloadButton(outputId = "log_rank_table_csv", label = "Download CSV table"),
+          downloadButton(outputId = "log_rank_table_txt", label = "Download TXT table")
+        ),
+        mainPanel(dataTableOutput("log_rank_table"))
+      )
+    )
+  ),
   navbarMenu(
     "Methylation and expression",
     tabPanel(
@@ -521,7 +526,7 @@ navbarPage(
               "This panel helps to understand which genes and which cpg islands are linked with differences in gene expression.<br><br>
               The table shows results of t-test (p-values are FDR adjusted) for methylation level difference between a group with high expression (top 10%) and low expression (bottom 10%) of a given KRAB-ZNF factor conducted for each cohort and gene separately. <br/> Hit 'Generate output' to run calculations. Note that they may be time-consuming as we need to process all cpg island."
             )
-            )),
+          )),
           checkboxInput(
             "only_significant_results",
             "Show only significant results (FDR adjusted p-value < 0.05, fold-change > 4)",
@@ -533,12 +538,12 @@ navbarPage(
           hr(),
           downloadButton(outputId = "methylation_expression_correlation_csv", label = "Download CSV"),
           width = 3
-            ),
+        ),
         mainPanel(
           dataTableOutput("methylation_expression_correlation_table")
         )
-        )
-  )
+      )
+    )
   ),
   navbarMenu(
     "Isoforms expression",
@@ -551,7 +556,7 @@ navbarPage(
               "This panel helps to understand which isoforms are expressed differently. It supplements boxplots presented in the next tab.<br><br>
               A table shows results of a t-test of gene isoform expression level between a group of normal tissue and cancer tissue conducted for each gene and cohort separately with a joined summary statistics for each group. Click Generate Output to view and download the table. Empty table means no data in TCGA available for selected variables. P-value equal to NA indicates an insufficient amount of data to conduct the test."
             )
-            )),
+          )),
           selectInput("cohort_isoform_table", "Choose cohort", choices = cohorts, selected = "BRCA"),
           selectInput("gene_isoform_table", "Choose gene", choices = all_genes),
           actionButton("perform_isoform_table", "Generate output"),
@@ -559,9 +564,14 @@ navbarPage(
           downloadButton(outputId = "isoform_test_all_csv", label = "Download CSV table"),
           hr(),
           downloadButton(outputId = "isoform_test_all_txt", label = "Download TXT table")
-          ),
-        mainPanel(dataTableOutput("normal_vs_cancer_isoforms_table"))
-          )
+        ),
+        mainPanel(dataTableOutput("normal_vs_cancer_isoforms_table"),
+                  HTML("Legend: <br>
+                    se - standard error, <br>
+                    25% - 1st quartile, 25 centile,<br>
+                    50% - median, 2nd quartile, 50 centile,<br>
+                    75% - 3rd quartile, 75 centile."))
+      )
     ),
     tabPanel(
       "Isoforms expression plots",
@@ -572,7 +582,7 @@ navbarPage(
               "This panel helps to understand which isoforms are expressed differently. It supplements the table presented in the previouse tab.<br><br>
                 Boxplots present the expression of different isoforms of a selected gene in normal and cancer tissues. "
             )
-            )),
+          )),
           selectInput("gene3", "Choose a gene:",
                       choices = all_genes, selected = "ZNF695"),
           selectInput(
@@ -590,9 +600,9 @@ navbarPage(
                       selected = 1),
           downloadButton('download.plot.normal.cancer'),
           width = 3
-            ),
+        ),
         mainPanel(plotOutput("normal_vs_cancer_isoforms_plot"))
-        )
+      )
     ),
     tabPanel(
       "Cancer tissue isoform expressions",
@@ -603,7 +613,7 @@ navbarPage(
               "This panel helps to understand which isoforms are more common in particular tumor. It supplements the table and boxplots presented in the previouse tabs.<br><br>
                 Each bar in the plot represents a percentage of total gene expression for a particular isoform of a selected gene."
             )
-            )),
+          )),
           selectInput("gene4", "Choose a gene:",
                       choices = all_genes),
           selectInput(
@@ -618,13 +628,13 @@ navbarPage(
                       selected = 1),
           downloadButton('download_isoform_expression_plot'),
           width = 3
-            ),
+        ),
         mainPanel(
           plotOutput("isoform_expressions_plot"),
           dataTableOutput("isoforms_expression_table")
         )
-          )
-        ),
+      )
+    ),
     tabPanel(
       "Isoform expressions across cohorts",
       sidebarLayout(
@@ -634,7 +644,7 @@ navbarPage(
               "This panel helps to understand which isoforms are more common in particular tumor. It supplements plots presented in the previous tabs but shows all tumors in a single plot. Isoformes are color coded. This way it is easier to notice differences between tumors in isoformes composition.<br><br>
                 Plots present, for each gene, percentages of total expression of each isoform across all cancer cohorts."
             )
-            )),
+          )),
           selectInput("gene5", "Choose a gene:",
                       choices = all_genes),
           selectInput("select_all_cohorts_isoform_expression_font", label = "Select font size", choices = 1:25, selected = 12),
@@ -643,13 +653,13 @@ navbarPage(
                       selected = 1),
           downloadButton('download_all_cohorts_isoform_expression_plot'),
           width = 3
-          ),
+        ),
         mainPanel(
           plotOutput("all_cohorts_isoform_expressions_plot"),
           dataTableOutput("all_cohorts_isoforms_expression_table")
         )
-    )
       )
+    )
   ),
   navbarMenu(
     "Expression in normal tissue",
@@ -729,7 +739,12 @@ navbarPage(
                  downloadButton("normal_expression_pvalues_table_download", label = "Download table")
                ),
                mainPanel(plotOutput("normal_expression_boxplot", height = 600),
-                         dataTableOutput("normal_expression_pvalues_table_render"))
+                         dataTableOutput("normal_expression_pvalues_table_render"),
+                         HTML("Legend: <br>
+                    se - standard error, <br>
+                    25% - 1st quartile, 25 centile,<br>
+                    50% - median, 2nd quartile, 50 centile,<br>
+                    75% - 3rd quartile, 75 centile."))
              ))
   )
-  )
+)
