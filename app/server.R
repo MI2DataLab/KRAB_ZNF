@@ -697,7 +697,7 @@ shinyServer(function(input, output) {
             `25%` = quantile(value, probs = 0.25, na.rm = TRUE),
             `50%` = quantile(value, probs = 0.5),
             `75%` = quantile(value, probs = 0.75),
-            n_onservations = n()
+            n_observations = n()
           ) %>%
           mutate(isoform_cut = substr(isoform, 1, 8))
         counter <- 1
@@ -1064,7 +1064,7 @@ shinyServer(function(input, output) {
         `25%` = quantile(expression, probs = 0.25, na.rm = TRUE),
         `50%` = quantile(expression, probs = 0.5),
         `75%` = quantile(expression, probs = 0.75),
-        n_onservations = n()
+        n_observations = n()
       )
 
   })
@@ -1238,7 +1238,7 @@ shinyServer(function(input, output) {
       `25%` = quantile(expression, probs = 0.25, na.rm = TRUE),
       `50%` = quantile(expression, probs = 0.5),
       `75%` = quantile(expression, probs = 0.75),
-      n_onservations = n()
+      n_observations = n()
     )
   })
 
@@ -1406,7 +1406,7 @@ shinyServer(function(input, output) {
         `25%` = quantile(expression, probs = 0.25, na.rm = TRUE),
         `50%` = quantile(expression, probs = 0.5),
         `75%` = quantile(expression, probs = 0.75),
-        n_onservations = n()
+        n_observations = n()
       )
 
 

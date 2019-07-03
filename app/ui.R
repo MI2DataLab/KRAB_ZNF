@@ -139,7 +139,8 @@ navbarPage(
              sidebarPanel(
                wellPanel(helpText(
                  HTML(
-                   "Boxplot is showing a comparison of expression levels of a selected gene between normal and cancer tissue. An additional table is provided with t-test results of the same comparisons."
+                   "This panel helps to compare genes expression between tumor and healthy sample for selected cohort and selected gene. Parameters in the left panel help to select suitable cohort/gene and tune the graphical elements in the plot.<br><br>
+                   Boxplots compare expression levels of a selected gene between normal and cancer tissue. An bottom table shows descriptive statistics and t-test results of the same comparisons."
                  )
                )),
                selectInput('select.tumor', label = 'Tumor',
@@ -190,10 +191,12 @@ navbarPage(
              sidebarPanel(
                wellPanel(helpText(
                  HTML(
-                   "Boxplot is showing a comparison of expression levels of a selected gene across selected subtypes. An additional table is provided with t-test results of the same comparisons."
+                   "This panel helps to understand differences in gene expression between different histological types of a selected tumor. If some types are linked with significantly low or high gene expression, then corresponding boxplots will be shifted.<br><br>
+                   Each boxplot shows median, and quartile expression (boundies od the box), min and max expression and outliers. This plot compares of expression levels of a selected gene across selected subtypes. An bottom table shows descriptive statistics and t-test results of the same comparisons."
                  )
                )),
-               downloadButton(outputId = "clinical.parameters.description", label = "Download clinical parameters description"),
+               HTML("Clinical parameters description in "), a(href="https://raw.githack.com/MI2DataLab/KRAB_ZNF/master/app/data/clinical_parameters.html", "html"),
+               downloadButton(outputId = "clinical.parameters.description", label = "pdf"),
                selectInput('tumor.name.subtypes', label = 'Tumor',
                            choices = setdiff(tumor.names, c("STES", "KIPAN", "CHOL")),
                            selected = tumor.names[1],
@@ -251,7 +254,8 @@ navbarPage(
                sidebarPanel(
                  wellPanel(helpText(
                    HTML(
-                     "A plot of Kaplan-Meier estimates of survival curves for a chosen gene and cohort along with the at-risk table."
+                     "This panel helps to understand if a expression of a given gene is linked with patients survival.<br><br>
+                      Kaplan-Meier estimates of survival curves for a chosen gene and cohort along with the at-risk table and p-values. This plot is generated with the survminer package."
                    )
                  )),
                  selectInput("gene", "Choose a gene:",
@@ -344,7 +348,8 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "Visualisation of cutpoints for the expression of a selected gene using maximally selected rank statistics."
+              "This panel helps to understand how one should discretize expression of a selected gene.<br><br>
+              Visualisation of cutpoints for the expression of a selected gene using maximally selected rank statistics is generated with the survminer package."
             )
           )),
           selectInput("gene2", "Choose a gene:",
@@ -424,7 +429,9 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "Heatmap representing p-values for the log-rank test for each pair of gene and cohort. A low p-value indicates a significant difference in survival. To customize the gene list delete all the genes from the box (Ctrl+A+Del) and select preferred ones via dropdown menu."
+              "This panel helps to understand which genes are linked with survival in particular tumors.<br><br>
+              Heatmap representing p-values for the log-rank test for each pair of gene and cohort. A low p-value indicates a significant difference in survival. To customize the gene list delete all the genes from the box (Ctrl+A+Del) and select preferred ones via dropdown menu.
+              p-values are after the FDR correction. The darkest color corresponds to the p-value < 0.1. Additional dendrograms help to understand which genes and which tumors are more similar to each other."
             )
             )),
           selectInput(
@@ -487,7 +494,8 @@ navbarPage(
       sidebarPanel(
         wellPanel(helpText(
           HTML(
-            "A table containing results of a log-rank test (null hypothesis = the two groups have identical survival and hazard functions) comparing survival of patients from two groups (a low and high group of expression of a given gene for each cohort separately chosen according to the median or optimal cutpoint). For each cohort and gene, we provide p-value of a log-rank test, numbers of observations in both groups and hazard ratio."
+            "This panel helps to understand which genes are linked with survival in particular tumors. It supplements the heatmap presented in previous tab.<br><br>
+              A table containing results of a log-rank test (null hypothesis = the two groups have identical survival and hazard functions) comparing survival of patients from two groups (a low and high group of expression of a given gene for each cohort separately chosen according to the median or optimal cutpoint). For each cohort and gene, we provide p-value of a log-rank test, numbers of observations in both groups and hazard ratio."
         )
           )),
         selectInput(
@@ -510,12 +518,13 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "A table shows results of a t-test (p-value adjusted using FDR method) for methylation level difference between a group with high expression (top 10%) and low expression (bottom 10%) of a given KRAB-ZNF factor conducted for each cohort and gene separately."
+              "This panel helps to understand which genes and which cpg islands are linked with differences in gene expression.<br><br>
+              The table shows results of t-test (p-values are FDR adjusted) for methylation level difference between a group with high expression (top 10%) and low expression (bottom 10%) of a given KRAB-ZNF factor conducted for each cohort and gene separately. <br/> Hit 'Generate output' to run calculations. Note that they may be time-consuming as we need to process all cpg island."
             )
             )),
           checkboxInput(
             "only_significant_results",
-            "Show only significant results",
+            "Show only significant results (FDR adjusted p-value < 0.05, fold-change > 4)",
             value = FALSE
           ),
           selectInput("gene6", "Choose a gene", choices = all_genes),
@@ -539,7 +548,8 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "A table shows results of a t-test of gene isoform expression level between a group of normal tissue and cancer tissue conducted for each gene and cohort separately with a joined summary statistics for each group. Click Generate Output to view and download the table. Empty table means no data in TCGA available for selected variables. P-value equal to NA indicates an insufficient amount of data to conduct the test."
+              "This panel helps to understand which isoforms are expressed differently. It supplements boxplots presented in the next tab.<br><br>
+              A table shows results of a t-test of gene isoform expression level between a group of normal tissue and cancer tissue conducted for each gene and cohort separately with a joined summary statistics for each group. Click Generate Output to view and download the table. Empty table means no data in TCGA available for selected variables. P-value equal to NA indicates an insufficient amount of data to conduct the test."
             )
             )),
           selectInput("cohort_isoform_table", "Choose cohort", choices = cohorts, selected = "BRCA"),
@@ -559,7 +569,8 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "Boxplots present the expression of different isoforms of a selected gene in normal and cancer tissues. "
+              "This panel helps to understand which isoforms are expressed differently. It supplements the table presented in the previouse tab.<br><br>
+                Boxplots present the expression of different isoforms of a selected gene in normal and cancer tissues. "
             )
             )),
           selectInput("gene3", "Choose a gene:",
@@ -589,7 +600,8 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "Each bar in the plot represents a percentage of total gene expression for a particular isoform of a selected gene."
+              "This panel helps to understand which isoforms are more common in particular tumor. It supplements the table and boxplots presented in the previouse tabs.<br><br>
+                Each bar in the plot represents a percentage of total gene expression for a particular isoform of a selected gene."
             )
             )),
           selectInput("gene4", "Choose a gene:",
@@ -619,7 +631,8 @@ navbarPage(
         sidebarPanel(
           wellPanel(helpText(
             HTML(
-              "Plots present, for each gene, percentages of total expression of each isoform across all cancer cohorts."
+              "This panel helps to understand which isoforms are more common in particular tumor. It supplements plots presented in the previous tabs but shows all tumors in a single plot. Isoformes are color coded. This way it is easier to notice differences between tumors in isoformes composition.<br><br>
+                Plots present, for each gene, percentages of total expression of each isoform across all cancer cohorts."
             )
             )),
           selectInput("gene5", "Choose a gene:",
@@ -645,7 +658,8 @@ navbarPage(
                sidebarPanel(
                  wellPanel(helpText(
                    HTML(
-                     "Heatmap presents mean (or log of mean) expression of selected genes. To customize the gene list delete all the genes from the box (Ctrl+A+Del) and select preferred ones via dropdown menu."
+                     "This panel helps to understand which genes (rows) are differentially expressed in different tumors (columns).  Different colors in rows identifies genes with different expressions across tumors. This plots supplements the table in the next panel.<br><br>
+                    Heatmap presents mean (or log of mean) expression of selected genes. To customize the gene list delete all the genes from the box (Ctrl+A+Del) and select preferred ones via dropdown menu."
                    )
                  )),
                  #checkboxInput("restrict", "Restrict to selected genes", value = TRUE),
@@ -698,7 +712,8 @@ navbarPage(
                sidebarPanel(
                  wellPanel(helpText(
                    HTML(
-                     "Boxplot presents a natural log of expression across all normal tissues along with a summary table with the data from normal tissues."
+                     "This panel helps to understand which genes (rows) are differentially expressed in different tumors (columns). This plots supplements the heatmap presented in the previous panel.<br><br>
+                    Boxplot presents a natural log of expression across all normal tissues along with a summary table with the data from normal tissues."
                    )
                  )),
                  selectInput("gene_normal_expression", "Select gene", choices = all_genes, selected = all_genes[1]),
