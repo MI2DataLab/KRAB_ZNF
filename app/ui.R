@@ -113,7 +113,7 @@ navbarPage(
                KRAB-ZNF explorer is developed by Rafal Cylwa and collaborators: Urszula Oleksiewicz, Marta Gladych, Kornel Kielczewski and Przemyslaw Biecek. <br>
                Exploration is based on a shiny application [1], plots are avaliable through plotly [2], pheatmap [3] nad ggplot2 [4] libraries. Survival analysis is done with survminer [5] package.
                Analyses are performed based on <a href="https://github.com/RTCGA/RTCGA">The Cancer Genome Atlas (TCGA) data</a> accessed with RTCGA package [6] . <br>
-               R sources of the application are in this <a href="https://github.com/rcylwa/KRAB_ZNF">Github repository</a>. <br>
+               R sources of the application are in this <a href="https://github.com/MI2DataLab/KRAB_ZNF">Github repository</a>. <br>
                <br>
                References:<br>
                 [1] Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2019). <b>shiny: Web Application Framework for R.</b> R package version 1.3.2. https://CRAN.R-project.org/package=shiny<br>
