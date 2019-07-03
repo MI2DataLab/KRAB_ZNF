@@ -1,13 +1,15 @@
-library(plotly)
-library(shiny)
-library(shinythemes)
+library("plotly")
+library("shiny")
+library("shinythemes")
 
-# Rafal's data
+# precalculated data
+# Gene expression data
 load("data/selected_genes_all.RData")
 load("data/selected_genes_all_restricted.RData")
-
-#Kornel's data
+# Methylation data
 source('data/krabmen/R/read_data.R')
+
+# inicialize dictionaries
 tumor.names <- load.tumor.names()
 gene.list <- load.gene.list()
 gene.names <- gene.list
@@ -46,7 +48,6 @@ cohorts <- c(
   "KIPAN",
   "KIRC",
   "KIRP",
-  #"LAML",
   "LGG",
   "LIHC",
   "LUAD",
@@ -57,7 +58,6 @@ cohorts <- c(
   "PRAD",
   "READ",
   "SARC",
-  #"SKCM",
   "STAD",
   "STES",
   "TGCT",
@@ -67,6 +67,7 @@ cohorts <- c(
   "UCS",
   "UVM"
 )
+
 cohorts_methylation <- c(
   "BRCA",
   "COAD",
@@ -86,6 +87,7 @@ cohorts_methylation <- c(
   "UCEC"
 )
 
+# navbar part of the interface
 navbarPage(
   title = "KRAB ZNF explorer",
   theme = shinytheme("yeti"),
@@ -97,20 +99,34 @@ navbarPage(
              HTML(
                '<b> KRAB-ZNF explorer - expression of KRAB-ZNF- transcription factors in The Cancer Genome Atlas study</b>
                <br>
-               KRAB-ZNF explorer is a web-based application for analyzing the expression of KRAB-ZNF transcription factors in the data from The Cancer Genome Atlas study. 
+               KRAB-ZNF explorer is a web-based application for analyzing the expression of KRAB-ZNF transcription factors in the data from The Cancer Genome Atlas study.
                <br>
                Key functionalities cover:
                <br>
                1) comparative analysis of KRAB-ZNF genes between normal and tumor samples, <br>
                2) correlation of KRAB-ZNF expression with various clinico-pathological parameters, <br>
-               3) analysis and visualization of the link between patient survival and expression of KRAB-ZNF genes, <br> 
+               3) analysis and visualization of the link between patient survival and expression of KRAB-ZNF genes, <br>
                4) analyses of the association between KRAB-ZNF expression and CpG methylation status,  <br>
-               5) analyses of isoform expressions for KRAB-ZNF genes in normal and tumor samples, <br> 
+               5) analyses of isoform expressions for KRAB-ZNF genes in normal and tumor samples, <br>
                4) comparative analysis of KRAB-ZNF expression in normal tissues <br>
                <br>
                KRAB-ZNF explorer is developed by Rafal Cylwa and collaborators: Urszula Oleksiewicz, Marta Gladych, Kornel Kielczewski and Przemyslaw Biecek. <br>
-               Analyses are performed based on <a href="https://github.com/RTCGA/RTCGA">The Cancer Genome Atlas (TCGA) data</a>. <br>
-               R sources of the application are in this <a href="https://github.com/rcylwa/KRAB_ZNF">Github repository</a>. <br>'
+               Exploration is based on a shiny application [1], plots are avaliable through plotly [2], pheatmap [3] nad ggplot2 [4] libraries. Survival analysis is done with survminer [5] package.
+               Analyses are performed based on <a href="https://github.com/RTCGA/RTCGA">The Cancer Genome Atlas (TCGA) data</a> accessed with RTCGA package [6] . <br>
+               R sources of the application are in this <a href="https://github.com/rcylwa/KRAB_ZNF">Github repository</a>. <br>
+               <br>
+               References:<br>
+                [1] Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2019). <b>shiny: Web Application Framework for R.</b> R package version 1.3.2. https://CRAN.R-project.org/package=shiny<br>
+                [2] Carson Sievert (2018) <b>plotly for R.</b> https://plotly-r.com<br>
+                [3] Raivo Kolde (2019). <b>pheatmap: Pretty Heatmaps.</b> R package version 1.0.12. https://CRAN.R-project.org/package=pheatmap<br>
+                [4] H. Wickham. <b>ggplot2: Elegant Graphics for Data Analysis.</b> Springer-Verlag New York, 2016<br>
+                [5] Alboukadel Kassambara and Marcin Kosinski (2019). <b>survminer: Drawing Survival Curves using `ggplot2`.</b> R package version 0.4.4. https://CRAN.R-project.org/package=survminer<br>
+                [6] Marcin Kosinski and Przemyslaw Biecek (2019). <b>RTCGA: The Cancer Genome Atlas Data Integration.</b> R package version 1.14.0. https://rtcga.github.io/RTCGA<br>
+
+
+
+
+               '
              )
              )),
            br(),
@@ -126,41 +142,41 @@ navbarPage(
                    "Boxplot is showing a comparison of expression levels of a selected gene between normal and cancer tissue. An additional table is provided with t-test results of the same comparisons."
                  )
                )),
-               selectInput('select.tumor', label = 'Tumor', 
-                           choices = tumor.names, 
+               selectInput('select.tumor', label = 'Tumor',
+                           choices = tumor.names,
                            selected = tumor.names[1], multiple = T),
-               
+
                hr(),
-               
-               selectInput('select.gene', label = 'Gene', 
-                           choices = gene.list, 
+
+               selectInput('select.gene', label = 'Gene',
+                           choices = gene.list,
                            selected = gene.list[1], multiple = T),
-               
+
                hr(),
-               
-               selectInput('select.scale', label = 'Scale', 
-                           choices = c("linear", "log"), 
+
+               selectInput('select.scale', label = 'Scale',
+                           choices = c("linear", "log"),
                            selected = 1),
-               
+
                numericInput('scale.min', 'Scale minimum', 1, min = 0, max = NA, step = 0.1),
-               
+
                uiOutput('breaks'),
-               
+
                hr(),
-               
-               numericInput('input.font.size', label = 'Font size', 
+
+               numericInput('input.font.size', label = 'Font size',
                             value = 24, min = 1, max = 1024),
-               
-               selectInput('select.file.type', label = 'Plot file type', 
-                           choices = c('tiff', 'pdf', 'eps'), 
+
+               selectInput('select.file.type', label = 'Plot file type',
+                           choices = c('tiff', 'pdf', 'eps'),
                            selected = 1),
-               
+
                checkboxInput('greyscale', label = 'Greyscale', value = F),
-               
+
                downloadButton('download.plot'),
                hr(),
-               selectInput('select.table.file.type', label = 'Table file type', 
-                           choices = c('csv', 'txt'), 
+               selectInput('select.table.file.type', label = 'Table file type',
+                           choices = c('csv', 'txt'),
                            selected = 1),
                downloadButton('pvalues.download')
              ),
@@ -178,53 +194,53 @@ navbarPage(
                  )
                )),
                downloadButton(outputId = "clinical.parameters.description", label = "Download clinical parameters description"),
-               selectInput('tumor.name.subtypes', label = 'Tumor', 
-                           choices = setdiff(tumor.names, c("STES", "KIPAN", "CHOL")), 
-                           selected = tumor.names[1], 
+               selectInput('tumor.name.subtypes', label = 'Tumor',
+                           choices = setdiff(tumor.names, c("STES", "KIPAN", "CHOL")),
+                           selected = tumor.names[1],
                            multiple = F),
-               
-               selectInput('gene.names.subtypes', label = 'Gene', 
-                           choices = gene.names, 
+
+               selectInput('gene.names.subtypes', label = 'Gene',
+                           choices = gene.names,
                            selected = gene.names[1], multiple = T),
-               
+
                uiOutput('subtypes'),
-               
+
                uiOutput('subtype.values'),
-               
+
                hr(),
-               
-               selectInput('select.scale.subtypes', label = 'Scale', 
-                           choices = c('linear', 'log'), 
+
+               selectInput('select.scale.subtypes', label = 'Scale',
+                           choices = c('linear', 'log'),
                            selected = 1),
-               
+
                numericInput('scale.min.subtypes', 'Scale minimum', 1, min = 0, max = NA, step = 0.1),
-               
+
                uiOutput("breaks.subtypes"),
-               
+
                hr(),
-               
-               numericInput('input.font.size.subtypes', label = 'Font size', 
+
+               numericInput('input.font.size.subtypes', label = 'Font size',
                             value = 24, min = 1, max = 1024),
-               
+
                checkboxInput('rotate.x.axis.subtypes', label = 'Rotate x axis text',
                              value = F),
-               
+
                hr(),
-               
-               selectInput('select.file.type.subtypes', label = 'File type', 
-                           choices = c('tiff', 'pdf', 'eps'), 
+
+               selectInput('select.file.type.subtypes', label = 'File type',
+                           choices = c('tiff', 'pdf', 'eps'),
                            selected = 2),
-               
+
                downloadButton(outputId = "plot.subtypes.download", label = "Download plot"),
                hr(),
-               selectInput('select.table.subtypes.file.type', label = 'Table file type', 
-                           choices = c('csv', 'txt'), 
+               selectInput('select.table.subtypes.file.type', label = 'Table file type',
+                           choices = c('csv', 'txt'),
                            selected = 1),
-               
+
                downloadButton(outputId = "table.subtypes.download", label = "Download table")
-               
+
              ),
-             
+
              mainPanel(plotOutput('distPlot.subtypes'),
                        dataTableOutput('pvalues.subtypes'))
            )),
@@ -396,7 +412,7 @@ navbarPage(
           downloadButton(outputId = "cutpoint_plot_tiff", label = "Download TIFF plot"),
           width = 3
         ),
-        
+
         # Show a summary of the dataset and an HTML table with the
         # requested number of observations
         mainPanel(plotOutput("cutpoint_plot"))
@@ -428,10 +444,6 @@ navbarPage(
             selected = "Greys"
           ),
           checkboxInput("all_genes_logrank", "Select all genes", value = TRUE),
-          #downloadButton(outputId = "heatmap_log_rank_plot_png", label = "Download PNG plot"),
-          #downloadButton(outputId = "heatmap_log_rank_plot_pdf", label = "Download PDF plot"),
-          #downloadButton(outputId = "heatmap_log_rank_plot_eps", label = "Download EPS plot"),
-          #downloadButton(outputId = "heatmap_log_rank_plot_tiff", label = "Download TIFF plot"),
           selectInput(
             "selected_genes_manually_log_rank",
             "Select genes manually:",
@@ -460,8 +472,8 @@ navbarPage(
             max = 30,
             value = 10
           ),
-          selectInput('select_file_type_log_rank_heatmap', label = 'File type', 
-                      choices = c('tiff', 'pdf', 'eps'), 
+          selectInput('select_file_type_log_rank_heatmap', label = 'File type',
+                      choices = c('tiff', 'pdf', 'eps'),
                       selected = 1),
           downloadButton('download_heatmap_log_rank'),
           width = 3
@@ -562,12 +574,10 @@ navbarPage(
           checkboxInput("boxplot_grey_scale", label = "Grey scale for the plot", value = TRUE),
           uiOutput('breaks.isoforms'),
           selectInput("select_isoform_boxplot_xlab_font", label = "Select font size", choices = 1:25, selected = 12),
-          selectInput('select.file.type.normal.cancer', label = 'File type', 
-                      choices = c('tiff', 'pdf', 'eps'), 
+          selectInput('select.file.type.normal.cancer', label = 'File type',
+                      choices = c('tiff', 'pdf', 'eps'),
                       selected = 1),
           downloadButton('download.plot.normal.cancer'),
-          #downloadButton(outputId = "normal_vs_cancer_isoforms_plot_png", label = "Download PNG plot"),
-          #downloadButton(outputId = "normal_vs_cancer_isoforms_plot_pdf", label = "Download PDF plot"),
           width = 3
             ),
         mainPanel(plotOutput("normal_vs_cancer_isoforms_plot"))
@@ -591,8 +601,8 @@ navbarPage(
             selected = "BRCA"
           ),
           selectInput("select_isoform_expression_font", label = "Select font size", choices = 1:25, selected = 12),
-          selectInput('select.file.type.isoform.expression', label = 'File type', 
-                      choices = c('tiff', 'pdf', 'eps'), 
+          selectInput('select.file.type.isoform.expression', label = 'File type',
+                      choices = c('tiff', 'pdf', 'eps'),
                       selected = 1),
           downloadButton('download_isoform_expression_plot'),
           width = 3
@@ -615,8 +625,8 @@ navbarPage(
           selectInput("gene5", "Choose a gene:",
                       choices = all_genes),
           selectInput("select_all_cohorts_isoform_expression_font", label = "Select font size", choices = 1:25, selected = 12),
-          selectInput('select.file.type.all.cohorts.isoform.expression', label = 'File type', 
-                      choices = c('tiff', 'pdf', 'eps'), 
+          selectInput('select.file.type.all.cohorts.isoform.expression', label = 'File type',
+                      choices = c('tiff', 'pdf', 'eps'),
                       selected = 1),
           downloadButton('download_all_cohorts_isoform_expression_plot'),
           width = 3
@@ -675,41 +685,14 @@ navbarPage(
                    max = 30,
                    value = 10
                  ),
-                 selectInput('select_file_type_expression_heatmap', label = 'File type', 
-                             choices = c('tiff', 'pdf', 'eps'), 
+                 selectInput('select_file_type_expression_heatmap', label = 'File type',
+                             choices = c('tiff', 'pdf', 'eps'),
                              selected = 1),
                  downloadButton('download_expression_heatmap1'),
                  width = 3
                ),
                mainPanel(plotOutput("expression_heatmap1"))
              )),
-    # tabPanel("Heatmap2",
-    #          sidebarLayout(
-    #            sidebarPanel(
-    #              wellPanel(helpText(
-    #                HTML(
-    #                  "You can view heatmap of mean expression either restricted to selected genes or select them manually."
-    #                )
-    #              )),
-    #              checkboxInput("restrict2", "Restrict to selected genes", value = TRUE),
-    #              checkboxInput("log_scale2", "Log scale", value = TRUE),
-    #              selectInput(
-    #                "heatmap_color_scale2",
-    #                "Select color scale",
-    #                choices = rownames(RColorBrewer::brewer.pal.info),
-    #                selected = "Greys"
-    #              ),
-    #              selectInput(
-    #                "selected_genes_manually2",
-    #                "Or select genes manually:",
-    #                choices = all_genes,
-    #                selected = all_genes,
-    #                multiple = TRUE
-    #              ),
-    #              width = 3
-    #            ),
-    #            mainPanel(plotlyOutput("expression_heatmap2"))
-    #          ))
     tabPanel("Expressions boxplots and table",
              sidebarLayout(
                sidebarPanel(
@@ -720,28 +703,18 @@ navbarPage(
                  )),
                  selectInput("gene_normal_expression", "Select gene", choices = all_genes, selected = all_genes[1]),
                  selectInput("select_normal_boxplot_font", label = "Select font size", choices = 1:25, selected = 12),
-                 selectInput('select_file_type_expression_boxplot', label = 'File type', 
-                             choices = c('tiff', 'pdf', 'eps'), 
+                 selectInput('select_file_type_expression_boxplot', label = 'File type',
+                             choices = c('tiff', 'pdf', 'eps'),
                              selected = 1),
                  downloadButton("normal_expression_boxplot_download", label = "Download plot"),
                  hr(),
-                 selectInput('select.normal.table.file.type', label = 'File type', 
-                             choices = c('csv', 'txt'), 
+                 selectInput('select.normal.table.file.type', label = 'File type',
+                             choices = c('csv', 'txt'),
                              selected = 1),
                  downloadButton("normal_expression_pvalues_table_download", label = "Download table")
                ),
                mainPanel(plotOutput("normal_expression_boxplot", height = 600),
                          dataTableOutput("normal_expression_pvalues_table_render"))
              ))
-    # tabPanel("Table",
-    #          sidebarLayout(
-    #            sidebarPanel(
-    #              selectInput('normal_expression_pvalues_table_download', label = 'File type', 
-    #                          choices = c('csv', 'txt'), 
-    #                          selected = 1),
-    #              downloadButton("label", label = "Download")
-    #            ),
-    #            mainPanel(dataTableOutput("normal_expression_pvalues_table_render"))
-    #          ))
   )
   )
