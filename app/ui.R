@@ -110,10 +110,10 @@ navbarPage(
                5) analyses of isoform expressions for KRAB-ZNF genes in normal and tumor samples, <br>
                4) comparative analysis of KRAB-ZNF expression in normal tissues <br>
                <br>
-               KRAB-ZNF explorer is developed by Rafal Cylwa and collaborators: Urszula Oleksiewicz, Marta Gladych, Kornel Kielczewski and Przemyslaw Biecek. <br>
-               Exploration is based on a shiny application [1], plots are avaliable through plotly [2], pheatmap [3] nad ggplot2 [4] libraries. Survival analysis is done with survminer [5] package.
+               KRAB-ZNF explorer is developed by Rafal Cylwa and collaborators: Urszula Oleksiewicz, Marta Machnik, Kornel Kielczewski and Przemyslaw Biecek. <br>
+               Exploration is based on a shiny library [1], plots are avaliable through plotly [2], pheatmap [3] and ggplot2 [4] libraries. Survival analysis is done with survminer [5] package.
                Analyses are performed based on <a href="https://github.com/RTCGA/RTCGA">The Cancer Genome Atlas (TCGA) data</a> accessed with RTCGA package [6] . <br>
-               R sources of the application are in this <a href="https://github.com/MI2DataLab/KRAB_ZNF">Github repository</a>. <br>
+               R sources of the application are in this <a href="https://github.com/MI2DataLab/KRAB_ZNF">Github repository</a>. Example application is presented in [7].<br>
                <br>
                References:<br>
                 [1] Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2019). <b>shiny: Web Application Framework for R.</b> R package version 1.3.2. https://CRAN.R-project.org/package=shiny<br>
@@ -122,10 +122,7 @@ navbarPage(
                 [4] H. Wickham. <b>ggplot2: Elegant Graphics for Data Analysis.</b> Springer-Verlag New York, 2016<br>
                 [5] Alboukadel Kassambara and Marcin Kosinski (2019). <b>survminer: Drawing Survival Curves using `ggplot2`.</b> R package version 0.4.4. https://CRAN.R-project.org/package=survminer<br>
                 [6] Marcin Kosinski and Przemyslaw Biecek (2019). <b>RTCGA: The Cancer Genome Atlas Data Integration.</b> R package version 1.14.0. https://rtcga.github.io/RTCGA<br>
-
-
-
-
+                [7] Marta Machnik, Rafał Cylwa, Kornel Kiełczewski, Przemysław Biecek, Triantafillos Liloglou, Andrzej Mackiewicz, and Urszula Oleksiewicz (2019). <b>The expression signature of cancer-associated KRAB-ZNF factors identified in TCGA pan-cancer transcriptomic data.</b>. Mol Oncol. 2019 Apr;13(4):701-724. doi: 10.1002/1878-0261.12407.
                '
              )
            )),
