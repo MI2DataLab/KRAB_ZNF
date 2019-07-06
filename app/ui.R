@@ -143,6 +143,7 @@ navbarPage(
                selectInput('select.tumor', label = 'Tumor',
                            choices = tumor.names,
                            selected = tumor.names[1], multiple = T),
+               helpText("Only tumors with corresponding 10 or more normal tissues to ensure the sufficient sample size for the comparative analysis."),
 
                hr(),
 
@@ -203,6 +204,7 @@ navbarPage(
                            choices = setdiff(tumor.names, c("STES", "KIPAN", "CHOL")),
                            selected = tumor.names[1],
                            multiple = F),
+               helpText("Only tumors with corresponding 10 or more normal tissues to ensure the sufficient sample size for the comparative analysis."),
 
                selectInput('gene.names.subtypes', label = 'Gene',
                            choices = gene.names,

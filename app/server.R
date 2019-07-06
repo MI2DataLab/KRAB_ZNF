@@ -75,6 +75,8 @@ shinyServer(function(input, output) {
     fit <-
       survfit(Surv(times, patient.vital_status) ~ expression, data = selected_data)
 
+    hr <- exp(coxph(Surv(times, patient.vital_status) ~ expression, data = selected_data)$coefficients)
+
     selected_gene <- input$gene
     limit_time <-
       max(max(selected_data[selected_data[, "expression"] == "low", "times"]),
@@ -101,6 +103,8 @@ shinyServer(function(input, output) {
         input$cohort,
         ", gene = ",
         input$gene,
+        ", HR = ",
+        round(hr, 2),
         ", n_low = ",
         n_low,
         ", n_high = ",
@@ -121,7 +125,7 @@ shinyServer(function(input, output) {
       # show bars instead of names in text annotations
       # in legend of risk table
       legend = "top",
-      legend.title = NULL,
+      legend.title = "Groups",
       surv.scale = "percent",
       break.x.by = 1,
       #risk.table.fontsize = 15,
@@ -155,7 +159,7 @@ shinyServer(function(input, output) {
       font.x = input$cutpoint_font_xlab,
       font.y = input$cutpoint_font_ylab,
       font.legend = input$cutpoint_font_legend
-    )
+    ) #+ scale_color_manual("Groups", values = c("red3", "black"))
   }
 
   # ultimate rendering function
@@ -1277,11 +1281,10 @@ shinyServer(function(input, output) {
 
     set.seed(1)
     ggplot(filtered.data(), aes(y = expression,
-                                x = tumor,
-                                fill = factor(type, labels = c('Healthy', 'Tumor')),
-                                color = factor(type, labels = c('Healthy', 'Tumor')))) +
+                                x = paste(tumor, type),
+                                fill = factor(type, labels = c('Healthy', 'Tumor')))) +
       geom_boxplot(alpha = 1, position = position_dodge(0.8), coef = 1000) +
-      geom_point(alpha = 0.5, position = position_jitter(width = 0.1)) +
+      geom_point(alpha = 0.2, position = position_jitter(width = 0.1), size=0.8, color="black") +
       colors +
       ggtitle('Boxplots for selected tumors') +
       ylab(paste0(input$select.gene, ' expression')) +
@@ -1379,7 +1382,8 @@ shinyServer(function(input, output) {
     data[, c(input$subtypes)] <- gsub(x = data[, c(input$subtypes)], " ", " \n")
 
     ggplot(data, aes_string(y = 'expression', x = input$subtypes)) +
-      geom_boxplot(alpha = 1, position = position_dodge(0.8)) +
+      geom_boxplot(alpha = 1, position = position_dodge(0.8), coef=100) +
+      geom_point(alpha = 0.2, position = position_jitter(width = 0.1), size=0.8, color="black") +
       ggtitle(input$subtypes) +
       ylab(paste0(input$gene.names.subtypes, ' expression')) +
       theme(legend.title = element_blank()) +
