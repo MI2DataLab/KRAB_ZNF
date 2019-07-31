@@ -258,8 +258,14 @@ navbarPage(
                sidebarPanel(
                  wellPanel(helpText(
                    HTML(
-                     "This panel helps to understand if a expression of a given gene is linked with patients survival.<br><br>
+                     "Top panel helps to understand if a expression of a given gene is linked with patients survival.<br><br>
                       Kaplan-Meier estimates of survival curves for a chosen gene and cohort along with the at-risk table and p-values. This plot is generated with the survminer package."
+                   )
+                 ),
+                 helpText(
+                   HTML(
+                     "Bottom panel helps to understand how one should discretize expression of a selected gene.<br><br>
+              Visualisation of cutpoints for the expression of a selected gene using maximally selected rank statistics is generated with the survminer package."
                    )
                  )),
                  selectInput("gene", "Choose a gene:",
@@ -344,89 +350,92 @@ navbarPage(
                  downloadButton(outputId = "survival_plot_tiff", label = "Download TIFF plot"),
                  width = 3
                ),
-               mainPanel(plotOutput("survival_curve", width = "90%", height = 500))
+               mainPanel(p("Kaplan-Meier curves for patients with high/low expression"),
+                         plotOutput("survival_curve", width = "90%", height = 500),
+                         p("Distribution of gene expression and cutpoint statistics for the optimal cutpoint"),
+                         plotOutput("cutpoint_plot"))
              )),
-    tabPanel(
-      "Cutpoints for expressions",
-      sidebarLayout(
-        sidebarPanel(
-          wellPanel(helpText(
-            HTML(
-              "This panel helps to understand how one should discretize expression of a selected gene.<br><br>
-              Visualisation of cutpoints for the expression of a selected gene using maximally selected rank statistics is generated with the survminer package."
-            )
-          )),
-          selectInput("gene2", "Choose a gene:",
-                      choices = selected_genes_all_restricted),
-          selectInput(
-            "cohort2",
-            "Choose a cohort",
-            choices = cohorts,
-            selected = "KIPAN"
-          ),
-          sliderInput(
-            "cutpoint_font_main",
-            "Font main:",
-            min = 5,
-            max = 30,
-            value = 15
-          ),
-          sliderInput(
-            "cutpoint_font_tickslab",
-            "Font tickslab:",
-            min = 5,
-            max = 30,
-            value = 12
-          ),
-          sliderInput(
-            "cutpoint_font_xlab",
-            "Font xlab:",
-            min = 5,
-            max = 30,
-            value = 15
-          ),
-          sliderInput(
-            "cutpoint_font_ylab",
-            "Font ylab:",
-            min = 5,
-            max = 30,
-            value = 15
-          ),
-          sliderInput(
-            "cutpoint_font_legend",
-            "Font legend:",
-            min = 5,
-            max = 30,
-            value = 15
-          ),
-          sliderInput(
-            "cutpoint_height_px",
-            "Downloaded plot height in px:",
-            min = 200,
-            max = 2000,
-            value = 600,
-            step = 10
-          ),
-          sliderInput(
-            "cutpoint_width_px",
-            "Downloaded plot width in px:",
-            min = 200,
-            max = 2000,
-            value = 800,
-            step = 10
-          ),
-          downloadButton(outputId = "cutpoint_plot_png", label = "Download PNG plot"),
-          downloadButton(outputId = "cutpoint_plot_pdf", label = "Download PDF plot"),
-          downloadButton(outputId = "cutpoint_plot_eps", label = "Download EPS plot"),
-          downloadButton(outputId = "cutpoint_plot_tiff", label = "Download TIFF plot"),
-          width = 3
-        ),
-
-        # Show a summary of the dataset and an HTML table with the
-        # requested number of observations
-        mainPanel(plotOutput("cutpoint_plot"))
-      )
-    ),
+    # tabPanel(
+    #   "Cutpoints for expressions",
+    #   sidebarLayout(
+    #     sidebarPanel(
+    #       wellPanel(helpText(
+    #         HTML(
+    #           "This panel helps to understand how one should discretize expression of a selected gene.<br><br>
+    #           Visualisation of cutpoints for the expression of a selected gene using maximally selected rank statistics is generated with the survminer package."
+    #         )
+    #       )),
+    #       selectInput("gene2", "Choose a gene:",
+    #                   choices = selected_genes_all_restricted),
+    #       selectInput(
+    #         "cohort2",
+    #         "Choose a cohort",
+    #         choices = cohorts,
+    #         selected = "KIPAN"
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_font_main",
+    #         "Font main:",
+    #         min = 5,
+    #         max = 30,
+    #         value = 15
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_font_tickslab",
+    #         "Font tickslab:",
+    #         min = 5,
+    #         max = 30,
+    #         value = 12
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_font_xlab",
+    #         "Font xlab:",
+    #         min = 5,
+    #         max = 30,
+    #         value = 15
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_font_ylab",
+    #         "Font ylab:",
+    #         min = 5,
+    #         max = 30,
+    #         value = 15
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_font_legend",
+    #         "Font legend:",
+    #         min = 5,
+    #         max = 30,
+    #         value = 15
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_height_px",
+    #         "Downloaded plot height in px:",
+    #         min = 200,
+    #         max = 2000,
+    #         value = 600,
+    #         step = 10
+    #       ),
+    #       sliderInput(
+    #         "cutpoint_width_px",
+    #         "Downloaded plot width in px:",
+    #         min = 200,
+    #         max = 2000,
+    #         value = 800,
+    #         step = 10
+    #       ),
+    #       downloadButton(outputId = "cutpoint_plot_png", label = "Download PNG plot"),
+    #       downloadButton(outputId = "cutpoint_plot_pdf", label = "Download PDF plot"),
+    #       downloadButton(outputId = "cutpoint_plot_eps", label = "Download EPS plot"),
+    #       downloadButton(outputId = "cutpoint_plot_tiff", label = "Download TIFF plot"),
+    #       width = 3
+    #     ),
+    # 
+    #     # Show a summary of the dataset and an HTML table with the
+    #     # requested number of observations
+    #     mainPanel(p(""))
+    #   )
+    # ),
     tabPanel(
       "Heatmaps of p-values",
       sidebarLayout(

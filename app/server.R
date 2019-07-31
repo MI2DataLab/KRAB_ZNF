@@ -141,16 +141,16 @@ shinyServer(function(input, output) {
   # cutpoint is selected to maximize test statistic
   cutpoint_plot <- function() {
     max_stat_cutpoint <- surv_cutpoint(
-      survival_data[survival_data$dataset == input$cohort2,],
+      survival_data[survival_data$dataset == input$cohort,],
       time = "times",
       event = "patient.vital_status",
-      variables = c(input$gene2)
+      variables = c(input$gene)
     )
 
     plot(
       max_stat_cutpoint,
-      xlab = paste(input$gene2, " mRNA expression level"),
-      title = paste("Cohort: ", input$cohort2),
+      xlab = paste(input$gene, " mRNA expression level"),
+      title = paste("Cohort: ", input$cohort),
       palette = c("#f00909", "#000000"),
       ggtheme = theme_bw(),
       font.main = c(input$survival_font_main, "bold"),
